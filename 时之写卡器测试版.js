@@ -87,6 +87,48 @@ html,body{height:100%;width:100%;overflow:hidden}
   /* 链接色（走变量，便于主题化）*/
   --link:#2563eb;
 }
+/* ＝＝＝ 深色模式（data-theme="dark"） ＝＝＝ */
+[data-theme="dark"]{
+  --bg:#1a1a2e;            /* 主背景：深空蓝黑 */
+  --surface:#1e1e36;       /* 卡面：深紫黑 */
+  --surface-soft:#252542;  /* 次级面：深紫灰 */
+  --surface-sink:#2a2a48;  /* 下沉面：更深紫灰 */
+  --ink:#e8e8f0;           /* 主文字：暖白 */
+  --ink-soft:#b8b8d0;      /* 次文字：浅紫灰 */
+  --muted:#8888aa;         /* 弱文字：中紫灰 */
+  --accent:#818cf8;        /* 主色：亮靛蓝（深底更亮）*/
+  --accent-deep:#6366f1;   /* 主色深：靛蓝 */
+  --accent-soft:rgba(129,140,248,.12);
+  --accent-soft-strong:rgba(129,140,248,.18);
+  --accent-border:rgba(129,140,248,.25);
+  --accent-border-strong:rgba(129,140,248,.50);
+  --accent-text:#a5b4fc;
+  --sage:#34d399;          /* 成功：翠绿 */
+  --sage-soft:rgba(52,211,153,.10);
+  --sage-soft-strong:rgba(52,211,153,.18);
+  --sage-border:rgba(52,211,153,.22);
+  --sage-border-strong:rgba(52,211,153,.42);
+  --sage-text:#6ee7b7;
+  --amber:#fbbf24;         /* 提醒：琥珀 */
+  --amber-soft:rgba(251,191,36,.10);
+  --amber-soft-strong:rgba(251,191,36,.18);
+  --amber-border:rgba(251,191,36,.22);
+  --amber-border-strong:rgba(251,191,36,.45);
+  --amber-text:#fcd34d;
+  --terra:#f87171;         /* 危险：淡红 */
+  --terra-soft:rgba(248,113,113,.10);
+  --terra-soft-strong:rgba(248,113,113,.18);
+  --terra-border:rgba(248,113,113,.22);
+  --terra-border-strong:rgba(248,113,113,.45);
+  --terra-text:#fca5a5;
+  --line:rgba(200,200,230,.12);        /* 描边：浅紫 */
+  --line-soft:rgba(200,200,230,.07);   /* 弱描边 */
+  --shadow-soft:0 6px 20px rgba(0,0,0,.3);
+  --shadow-card:0 12px 30px rgba(0,0,0,.4);
+  --shadow-float:0 20px 60px rgba(0,0,0,.5);
+  --link:#60a5fa;
+  --scrollbar-thumb:rgba(150,150,180,.3);
+}
 body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:calc(14px * var(--app-font-scale,1));-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 /* 工作区关键模块的字体大小也随缩放走，但保持最小字号保证可读性 */
 .topbar h1{font-size:calc(.95em * var(--app-font-scale,1))}
@@ -759,7 +801,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 .ws-dropdown-item:hover svg{opacity:1}
 .ws-dropdown-item .ws-item-badge{margin-left:auto;font-size:.72em;padding:1px 6px;border-radius:4px;background:var(--accent-soft);color:var(--accent-deep)}
 .ws-dropdown-item .ws-item-badge.done{background:var(--sage-soft);color:var(--sage-text)}
-/* 工作区下拉中的字体控件展开栏 */
+/* 工��区下拉中的字体控件展开栏 */
 .ws-font-expand{padding:8px 14px 10px;background:var(--surface-soft);border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);margin:2px 0}
 .ws-font-expand .ws-font-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer;user-select:none;font-size:.78em;color:var(--ink-soft);font-weight:600}
 .ws-font-expand .ws-font-header:hover{color:var(--accent-deep)}
@@ -840,7 +882,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 .ws-split-right .ws-diff-view{flex:1;border:none;border-radius:0;background:var(--surface-soft)}
 @media (max-width: 900px){.ws-split-view{grid-template-columns:1fr}.ws-split-left{border-right:none;border-bottom:1px solid var(--line-soft)}}
 /* preview */
-.ws-preview-iframe{flex:1;width:100%;border:1px solid var(--line-soft);border-radius:var(--radius-sm);background:#fff}
+.ws-preview-iframe{flex:1;width:100%;border:1px solid var(--line-soft);border-radius:var(--radius-sm);background:var(--surface)}
 .ws-preview-md{flex:1;overflow-y:auto;padding:12px 14px;font-size:.86em;line-height:1.65;color:var(--ink-soft)}
 /* head actions */
 .ws-head-actions{display:flex;align-items:center;gap:6px}
@@ -961,7 +1003,10 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     // 头像菜单专用
     undo:       'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-4',
     image:      'M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 16l-5-5L5 21',
-    settings:   'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'
+    settings:   'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+    // 日夜模式
+    sun:        'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 20.05l-.71.71M21 12h-1M4 12H3m16.66 7.66l-.71-.71M4.05 4.05l-.71-.71M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z',
+    moon:       'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'
   };
 
   /**
@@ -984,6 +1029,49 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     return '<svg class="ic' + c + '" viewBox="0 0 24 24" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + path + '"/></svg>';
   }
 
+  // ===== 日夜主题切换 =====
+  var THEME_STORAGE_KEY = 'shizhi_cardmaker_theme';
+
+  function getSavedTheme() {
+    try { return localStorage.getItem(THEME_STORAGE_KEY) || 'light'; } catch(e) { return 'light'; }
+  }
+
+  function saveTheme(theme) {
+    try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch(e) {}
+  }
+
+  function setTheme(doc, theme) {
+    if (!doc) doc = document;
+    var root = doc.documentElement;
+    if (theme === 'dark') {
+      root.setAttribute('data-theme', 'dark');
+    } else {
+      root.removeAttribute('data-theme');
+    }
+    saveTheme(theme);
+    // 更新切换按钮图标
+    var btn = doc.getElementById('themeToggle');
+    if (btn) {
+      btn.innerHTML = svgIcon(theme === 'dark' ? 'sun' : 'moon', 16);
+    }
+  }
+
+  function toggleTheme(doc) {
+    var root = doc ? doc.documentElement : document.documentElement;
+    var isDark = root.getAttribute('data-theme') === 'dark';
+    setTheme(doc, isDark ? 'light' : 'dark');
+  }
+
+  function initTheme(doc) {
+    var saved = getSavedTheme();
+    setTheme(doc, saved);
+    // 绑定主题切换按钮
+    var btn = doc.getElementById('themeToggle');
+    if (btn) {
+      btn.addEventListener('click', function() { toggleTheme(doc); });
+    }
+  }
+
 
     // ============================================================================
   // SECTION 2（续） 通用工具：Modal Iframe 创建与样式注入
@@ -998,7 +1086,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         var iframe = parentDoc.createElement('iframe');
         iframe.id = SCRIPT_ID + '-modal';
         iframe.setAttribute('script_id', SCRIPT_ID);
-        iframe.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;border:none;z-index:99999;background:#f6f2ea;';
+        iframe.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;border:none;z-index:99999;background:var(--bg,#f6f2ea);';
         iframe.addEventListener('load', function() {
           try {
             var d = iframe.contentDocument || iframe.contentWindow.document;
@@ -1015,6 +1103,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               charset.setAttribute('charset', 'UTF-8');
               d.head.appendChild(charset);
             } catch(e) {}
+            // 初始化已保存的主题（日夜模式）
+            try { initTheme(d); } catch(e) {}
             resolve(d);
           } catch (e) { reject(e); }
         });
@@ -1565,7 +1655,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '</writing_principles>\n\n' +
     // ===== 【写卡预设注入 #4】📝 输出格式要求 output_format =====
     '<output_format>\n' +
-    '当输出实际创作内容（制作角色卡、写故事内容、创建世界观设定、编写场景描写、输出任何创作内容）时，每个世界书条目的content字段必须使用YAML中文格式并用缩进+冒号+短横线表达层级：\n' +
+    '当输出实际创作内容（制作角色卡、写故事���容、创建世界观设定、编写场景描写、输出任何创作内容）时，每个世界书条目的content字段必须使用YAML中文格式并用缩进+冒号+短横线表达层级：\n' +
     '- 使用缩进表示层级关系，每级缩进2个空格\n- 使用冒号分隔键和值\n- 列表项使用短横线开头\n- 所有键名和内容都使用中文\n- 保持结构清晰，层级分明\n' +
     '当进行解释说明或回答问题时，不需要使用代码块/格式，直接用自然语言输出即可。\n' +
     '</output_format>\n\n' +
@@ -1675,7 +1765,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '=== ⚠️⚠️⚠️ 渐进式信息收集（最高优先级，违反将导致任务失败） ===\n' +
     '1. **严禁一次性生成所有内容**：每轮对话只生成1-2个体系的内容\n' +
     '2. **开场白生成时机**：开场白(first_mes)只能在以下情况生成：\n' +
-    '   - 用户明确要求"生成开场白"时\n' +
+    '   - 用户明确要求"生成��场白"时\n' +
     '   - 信息完整度达到80%以上且用户说"生成角色卡"时\n' +
     '   - 严禁在信息收集阶段（完整度<80%）主动生成开场白\n' +
     '3. **第一轮对话规则**：\n' +
@@ -1801,7 +1891,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '     · 【省略与不列规则】\n' +
     '       - string 类型变量省略 type 字段\n' +
     '       - _ 前缀字段是只读（如 _当前回合、_当日好感度增幅），不要列更新规则\n' +
-    '       - 名字自解释的变量（如 称呼、位置、心情）不列规则，除非用户/Explorer 指定特殊规则\n' +
+    '       - 名字自解���的变量（如 称呼、位置、心情）不列规则，除非用户/Explorer 指定特殊规则\n' +
     '     · 【工作流程】\n' +
     '       第一步：确认变量信息（向用户询问）\n' +
     '         1. 变量结构脚本里有哪些变量？\n' +
@@ -1952,7 +2042,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '     · 分段建议：≥80深爱 / ≥50好感 / ≥20熟识 / <20陌生\n' +
     '     · 典型场景：按好感度/剧情日切换角色语气、称呼、行为段落\n' +
     '\n' +
-    '## 9.3 正则与占位符流水线（写卡器自动注入正则1-5 + AI生成正则6）\n' +
+    '## 9.3 正则与占位符流水线（写卡���自动注入正则1-5 + AI生成正则6）\n' +
     '9.3.1 正则1-5（写卡器自动注入，AI不用管）：\n' +
     '     · 正则1（promptOnly）：从提示词移除<Analysis>段\n' +
     '     · 正则2（promptOnly, minDepth=4）：移除旧消息<UpdateVariable>段，仅保留最近2楼\n' +
@@ -2082,7 +2172,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '  - 核心规则：100%（必触发）\n' +
     '  - 随机事件：10-30%（增加惊喜感）\n' +
     '  - 稀有事件：1-5%（彩蛋级）\n' +
-    '  - 叙事类条目：50-70%（有概率补充背景，不强制）\n' +
+    '  - 叙事类条目：50-70%（有概率补充背景，不��制）\n' +
     '- useProbability：是否启用概率过滤（true=启用，false=始终触发）\n' +
     '  - constant=true的常驻条目建议设为false（始终生效）\n' +
     '  - selective=true的触发条目建议设为true（配合probability使用）\n\n' +
@@ -2355,7 +2445,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '      findRegex="/<status>([\\s\\S]*?)</status>/gi"\n' +
     '      replaceString="<div style=\\"background:#1a1a2e;padding:8px 12px;border-radius:8px;border-left:4px solid #e94560;color:#e0e0e0;\\">$1</div>"\n' +
     '      placement=[1]\n' +
-    '      注意：需要在用户设置中关闭"Show <tags> in responses"\n' +
+    '      注意：需要在��户设置中关闭"Show <tags> in responses"\n' +
     '  14. STscript布尔判断（配合斜杠命令）：\n' +
     '      findRegex="/<action>([^<]+)</action>/gi"\n' +
     '      replaceString="ACTION_MATCH_FOUND"\n' +
@@ -2987,7 +3077,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '【格式模板】\n' +
     '  当NPC的"XXX度"变量达到100时，AI需根据该NPC的【性格】与【身份】触发以下分支：\n' +
     '  1.【性格类型A】：具体行为反应 + 触发的剧情模式\n' +
-    '  2.【性格类型B】：具体行为反应 + 触发的剧情模式\n' +
+    '  2.【性格类型B】：具体行为���应 + 触发的剧情模式\n' +
     '  3.【性格类型C】：具体行为反应 + 触发的剧情模式\n' +
     '【铁律】分支数 ≥ 3，每条必须含"行为反应+剧情模式"两部分，禁止只写抽象倾向。\n\n' +
     '**⚡ 事件完善工作流：机制+细化+反馈 三联条目模式**\n' +
@@ -3097,7 +3187,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '**MVU 事件系统**：\n' +
     '- `Mvu.events.VARIABLE_INITIALIZED`：变量初始化完成（仅新开聊天时触发）\n' +
     '- `Mvu.events.VARIABLE_UPDATE_STARTED`：变量更新开始\n' +
-    '- `Mvu.events.COMMAND_PARSED`：变量更新命令解析完成（可修复命令）\n' +
+    '- `Mvu.events.COMMAND_PARSED`：变量更新命令解析完成（可修���命令）\n' +
     '- `Mvu.events.VARIABLE_UPDATE_ENDED`：变量更新结束（可做后处理）\n' +
     '- `Mvu.events.BEFORE_MESSAGE_UPDATE`：变量存入楼层前\n\n' +
     '**核心 API**：\n' +
@@ -3603,7 +3693,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       // 过滤 entries/character_book.entries：
       // 允许所有MVU体系条目通过（8条工作流条目+附加条目），只拦截明确是角色卡Tab专属的内容
       // 允许通过的：MVU变量条目（InitVar/变量列表/更新规则/输出格式/格式强调/占位提醒等）/ 阶段判定 / EJS控制器 / 人设切换 / 派生字段 / 状态机 / 自定义变量相关条目 等
-      // 拦截的：明确属于角色卡Tab常驻体系/世界观体系的专有模板条目（基础公理/核心铁则/场景机制/实体交互/叙事背景等）
+      // 拦截的：明确属于角色卡Tab常驻体系/世界观体系的专有模板条目（基础公理/核心铁���/场景机制/实体交互/叙事背景等）
       var CARD_ONLY_TEMPLATES_RE = /^<(基础公理|核心铁则|世界元数据|交互软规则|近场强约束|当前局势|场景机制|核心玩法|世界规则|实体交互|重要角色|势力与组织|物品|地点场景|叙事背景|故事发展|文化与习俗|历史事件|动态适配|引导机制|互动选项|统一输出格式|角色边界|禁止项|自定义条目|观察锚点)>/i;
       var filterMvuOnlyEntries = function(arr, srcName) {
         if (!arr || !Array.isArray(arr)) return arr;
@@ -4609,7 +4699,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '       · 文件头固定：import { registerMvuSchema } from \'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js\';\n' +
     '       · 文件尾固定：$(() => { registerMvuSchema(Schema); })\n' +
     '       · 严格遵循zod 4规范（详见MVU变量结构脚本创作指导）\n' +
-    '  第2条：[InitVar]初始变量（世界书条目，enabled=false）—— YAML格式，严格依据第1条schema生成；schema有z.prefault()的字段可省略；enabled必须=false\n' +
+    '  第2条：[InitVar]初始变量（世界书条目，enabled=false）—— YAML格���，严格依据第1条schema生成；schema有z.prefault()的字段可省略；enabled必须=false\n' +
     '  第3条：[mvu_update]变量更新规则（世界书条目，constant=true）—— 依据第1条schema生成每个变量路径的type/range/format/check\n' +
     '  第4条：变量列表（世界书条目，constant=true depth=0）—— 固定内容：<status_current_variables>null</status_current_variables>\n' +
     '  第5条：[mvu_update]变量输出格式（世界书条目，constant=true depth=0）—— 固定YAML格式，<UpdateVariable>+<Analysis>+<JSONPatch>（5种操作：replace/delta/insert/remove/move）\n' +
@@ -4651,7 +4741,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '     - 是否要限制对象的键数量？\n\n' +
     '第二步：确认结构\n' +
     '  根据用户需求，先用自然语言列出结构大纲，让用户确认是否符合需求\n\n' +
-    '第三步：编写初始变量\n' +
+    '第三步：编写初始��量\n' +
     '  按照zod 4编写javascript文件\n\n' +
     '【额外zod要求】\n' +
     '\n' +
@@ -5067,7 +5157,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       '   · 任何其他变量相关、变量更新、变量渲染的条目\n' +
       '2. ❌禁止生成<状态栏>条目或任何状态栏相关的世界书条目！\n' +
       '   · MVU变量系统和状态栏完全由「MVU变量状态栏」Tab独立管理，不属于角色卡生成范畴\n' +
-      '   · 如果用户明确提到MVU/变量/状态栏，回复:「请切换到「MVU变量状态栏」Tab进行MVU变量系统和状态栏的设计」\n' +
+      '   · 如果用户明确提到MVU/变量/状态栏，回复:「请切换到「MVU变量状态���」Tab进行MVU变量系统和状态栏的设计」\n' +
       '3. ❌禁止在任何生成的JSON字段（description/system_prompt/entries等）中包含MVU相关内容！\n' +
       '4. ❌禁止在regex_scripts中生成任何与MVU相关的正则脚本！\n' +
       '5. ✅除上述MVU相关条目外，正常生成所有角色卡/世界书条目（基础公理、核心铁则、近场强约束、场景机制、实体交互、叙事背景、动态适配等）\n' +
@@ -5318,7 +5408,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       '第3条: comment="[mvu_update]变量更新规则", constant=true, position=4, depth=0, order=200\n' +
       '       content=依据第1条schema为每个变量路径生成 type/range/check（详见MVU_VAR_SPEC第3条）\n' +
       '第4条: comment="变量列表", constant=true, position=4, depth=0, order=200\n' +
-      '       content 标签内为 null，由 MVU 脚本展开后显示变量快照（详见MVU_VAR_SPEC第4条）\n' +
+      '       content 标签内为 null，由 MVU 脚本展开后显示变量快照（��见MVU_VAR_SPEC第4条）\n' +
       '第5条: comment="[mvu_update]变量输出格式", constant=true, position=4, depth=0, order=200\n' +
       '       content=固定YAML原样输出，<UpdateVariable>+<Analysis>+<JSONPatch>（详见MVU_VAR_SPEC第5条）\n' +
       '第6条: comment="[mvu_update]变量输出格式强调", constant=true, position=4, depth=0, order=200, enabled=false\n' +
@@ -7722,7 +7812,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     }
   }
 
-  // ===== 修复Bug5：将世界书绑定到当前角色卡（rebindCharWorldbooks） =====
+  // ===== 修复Bug5：将世界书绑定到当前角���卡（rebindCharWorldbooks） =====
   // 根因：步骤2仅写了 character.data.world 字段（v3 规范数据），但并未通过酒馆助手 API
   // 真正激活角色卡与世界书的关联，导致世界书虽已生成却"不关联到角色卡"。
   // 此函数在切换到角色卡后调用，把 worldbookName 设为主世界书，并保留原有 additional 世界书。
@@ -8460,6 +8550,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                 '<h1>' + svgIcon('bolt', 18, 'topbar-ic') + ' 时之写卡器</h1>' +
               '</div>' +
               '<div class="topbar-right">' +
+                '<button class="icon-btn icon-btn-square" id="themeToggle" aria-label="切换日夜模式" title="切换日夜模式">' + svgIcon('moon', 16) + '</button>' +
                 '<button class="icon-btn icon-btn-square danger" id="closeBtn" aria-label="关闭" title="关闭">' + svgIcon('close', 16) + '</button>' +
               '</div>' +
             '</div>' +
@@ -8508,6 +8599,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                 '</div>' +
               '</div>' +
               '<div class="topbar-right">' +
+                '<button class="icon-btn icon-btn-square" id="themeToggle" aria-label="切换日夜模式" title="切换日夜模式">' + svgIcon('moon', 16) + '</button>' +
                 '<div class="ws-dropdown-wrap" id="wsMenuWrap">' +
                   '<button class="icon-btn" id="wsMenuBtn">' + svgIcon('menu', 15) + ' 工作区</button>' +
                   '<div class="ws-dropdown" id="wsDropdown"></div>' +
@@ -10794,7 +10886,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         saveToStorage();
         progress = calcProgress();
         rerenderChatMessages();
-        showToast(ok ? '✅ 已撤回此条之后所有AI消息并回滚修改' : '✅ 已撤回此条之后所有AI消息（无快照可回滚，角色卡未变更）', 'success');
+        showToast(ok ? '✅ 已撤回此条之后所有AI消息并���滚修改' : '✅ 已撤回此条之后所有AI消息（无快照可回滚，角色卡未变更）', 'success');
       }
 
       // ===== 重新生成：某条AI消息（撤回该AI回复后重新调用AI）=====
@@ -12772,7 +12864,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             (cardData.name ? '- 名称：' + cardData.name + '\n' : '') +
             (cardData.description ? '- 描述(完整' + (cardData.description||'').length + '字，不截断)：' + (cardData.description||'') + '\n' : '') +
             '- 条目数：' + (((cardData.character_book || {}).entries || []).length) + '条\n' +
-            '\n=== 输出要求 ===\n只输出一个完整的```json代码块，包含完整角色卡数据（spec/data/character_book结构）。严禁夹带任何MVU内容。';
+            '\n=== 输出要求 ===\n只输出一个完整的```json代码块，包���完整角色卡数据（spec/data/character_book结构）。严禁夹带任何MVU内容。';
           // 注入全局人设（与 callAIChat 路径保持一致）
           var _genPersonaHdr = getPersonaHeader();
           if (_genPersonaHdr) genPrompt = _genPersonaHdr + '\n\n' + genPrompt;
@@ -13843,7 +13935,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             { has: _pvD[2], icon: 'list',   name: '第3条 [mvu_update]更新规则',  desc: '依据schema生成每变量路径的 type/range/format/check' },
             { has: _pvD[3], icon: 'list',   name: '第4条 变量列表',              desc: '固定内容：<status_current_variables>null</status_current_variables>' },
             { has: _pvD[4], icon: 'list',   name: '第5条 [mvu_update]输出格式',  desc: '固定YAML：<UpdateVariable>+<Analysis>+<JSONPatch>（5种操作）' },
-            { has: _pvD[5], icon: 'list',   name: '第6条 输出格式强调',          desc: '固定YAML原样输出强调，AI不输出<UpdateVariable>时启用' },
+            { has: _pvD[5], icon: 'list',   name: '��6条 输出格式强调',          desc: '固定YAML原样输出强调，AI不输出<UpdateVariable>时启用' },
             { has: _pvD[6], icon: 'sliders',name: '第7条 <状态栏>占位提醒',      desc: '提醒AI每条回复底部输出 <StatusPlaceHolderImpl/>' },
             { has: _pvChk.has8, icon: 'table', name: '第8条 状态栏HTML',          desc: '正则6 [美化]MVU状态栏（markdownOnly=true，前7条完成后才生成）' }
           ];
