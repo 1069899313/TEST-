@@ -1,6 +1,6 @@
 (function() {
 /* ============================================================================
- * 时之写卡器 · Tavern Helper 脚本（整理版13.16）
+ * 时之写卡器 · Tavern Helper 脚本（整理版）
  * ----------------------------------------------------------------------------
  * 项目类型：后台脚本（Tavern Helper Script · 相当于模板里的 index.ts）
  * 运行形式：单文件 JS，导入到酒馆脚本库，点击脚本按钮打开写卡器
@@ -472,6 +472,25 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
   word-break:break-word;
   overflow:hidden;
 }
+/* 消息工具条（复制按钮）*/
+.msg-toolbar{display:flex;gap:4px;padding:4px 0 2px;opacity:0;transition:opacity .2s ease}
+.chat-msg:hover .msg-toolbar{opacity:1}
+.msg-toolbar .msg-copy-btn{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;font-size:.72em;color:var(--muted);background:var(--surface);border:1px solid var(--line-soft);border-radius:6px;cursor:pointer;transition:all .15s ease;font-family:inherit}
+.msg-toolbar .msg-copy-btn:hover{color:var(--accent-deep);border-color:var(--accent-border);background:var(--accent-soft)}
+
+/* 手动导入/编辑 弹窗 */
+.sb-import-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:10001;padding:16px}
+.sb-import-modal{background:var(--surface);border-radius:var(--radius);box-shadow:0 20px 60px rgba(15,23,42,.2);width:100%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.sb-import-header{padding:14px 18px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sb-import-header h3{font-size:.95em;color:var(--accent-deep);font-weight:700;display:flex;align-items:center;gap:7px;margin:0}
+.sb-import-body{flex:1;overflow:auto;padding:14px 18px;display:flex;flex-direction:column;gap:12px}
+.sb-import-body textarea{width:100%;min-height:200px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);font-size:13px;font-family:var(--font-mono);line-height:1.6;resize:vertical;color:var(--ink);background:var(--surface-soft)}
+.sb-import-body .sb-hint{font-size:.78em;color:var(--muted);line-height:1.5}
+.sb-import-footer{padding:10px 18px;border-top:1px solid var(--line-soft);display:flex;justify-content:flex-end;gap:8px}
+.sb-import-footer .btn{padding:6px 16px;border-radius:8px;font-size:.82em;font-weight:600;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-family:inherit;transition:all .15s ease}
+.sb-import-footer .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sb-import-footer .btn-primary:hover{background:var(--accent-deep)}
+.sb-import-footer .btn:hover{background:var(--surface-soft);border-color:var(--accent-border)}
 
 /* ===== 上下文操作条：替代旧 mod-focus + mod-dash + mvu-info-panel 三件套 ===== */
 .ctx-bar{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:10px 14px;background:linear-gradient(180deg,var(--surface) 0%,var(--surface-soft) 100%);border-bottom:1px solid var(--line-soft);min-height:46px;position:relative}
@@ -8748,6 +8767,12 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         items += '<div class="ws-dropdown-section">导入导出</div>';
         items += '<div class="ws-dropdown-item" data-action="export-log">' + svgIcon('fileExport', 15) + ' 导出聊天记录</div>';
         items += '<div class="ws-dropdown-item" data-action="import-card">' + svgIcon('download', 15) + ' 导入角色卡</div>';
+        if (currentTab === 'mvu') {
+          items += '<div class="ws-dropdown-divider"></div>';
+          items += '<div class="ws-dropdown-section">MVU状态栏工具</div>';
+          items += '<div class="ws-dropdown-item" data-action="manual-import-sb">' + svgIcon('download', 15) + ' 手动导入状态栏HTML</div>';
+          items += '<div class="ws-dropdown-item" data-action="edit-sb-regex">' + svgIcon('sliders', 15) + ' 查看/编辑状态栏正则</div>';
+        }
         dropdown.innerHTML = items;
         // ===== 字体大小展开栏：折叠/展开切换 =====
         var fontHeader = doc.getElementById('wsFontHeader');
@@ -10289,6 +10314,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             // Phase C：状态栏已生成
             actions.push({ action: 'mvuPreview',      icon: 'eye',     label: '预览状态栏', hl: true });
             actions.push({ action: 'start_sb',        icon: 'refreshCycle', label: '重新生成' });
+            actions.push({ action: 'manual-import-sb', icon: 'download', label: '手动导入' });
             actions.push({ action: 'reset_sb',        icon: 'trash',   label: '清除状态栏' });
           }
         }
@@ -10490,6 +10516,15 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           // 如果在MVU Tab点了角色卡Tab才有的动作（应该被上面的跳转拦住了，兜底防止意外）
           showToast('⚠️ 该动作仅在「角色卡生成」Tab中可用', 'warning');
         }
+        // ===== 状态栏手动导入 / 编辑正则 =====
+        if (action === 'manual-import-sb') {
+          showManualImportSB();
+          return;
+        }
+        if (action === 'edit-sb-regex') {
+          showRegexEditor();
+          return;
+        }
       }
 
       // 队列模式：callAIChat处理期间，addAssistantMsg的调用改为收集到队列，最后合并为一条消息
@@ -10608,10 +10643,34 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             showAvatarMenu(role, msgIdx, avEl);
           });
         }
-        // AI 消息：绑定 section 折叠交互
+        // AI 消息：绑定 section 折叠交互 + 添加复制工具条
         if (role === 'assistant') {
           var bubbleDiv = div.querySelector('.bubble');
           if (bubbleDiv) bindSectionToggles(bubbleDiv);
+          // 添加复制工具条（AI消息底部）
+          var toolbar = doc.createElement('div');
+          toolbar.className = 'msg-toolbar';
+          var copyBtn = doc.createElement('button');
+          copyBtn.className = 'msg-copy-btn';
+          copyBtn.innerHTML = svgIcon('copy', 12) + ' 复制内容';
+          copyBtn.addEventListener('click', function() {
+            var raw = bubbleDiv ? bubbleDiv.getAttribute('data-raw-text') : '';
+            if (!raw) { showToast('无可复制的内容', 'warning'); return; }
+            try {
+              var ta = doc.createElement('textarea');
+              ta.value = raw;
+              doc.body.appendChild(ta);
+              ta.select();
+              doc.execCommand('copy');
+              doc.body.removeChild(ta);
+              showToast('✅ 已复制到剪贴板', 'success');
+            } catch(e) {
+              // fallback
+              try { navigator.clipboard.writeText(raw).then(function() { showToast('✅ 已复制到剪贴板', 'success'); }); } catch(e2) { showToast('❌ 复制失败', 'error'); }
+            }
+          });
+          toolbar.appendChild(copyBtn);
+          div.appendChild(toolbar);
         }
         scrollChat();
       }
@@ -12466,6 +12525,138 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           }
         }
         return true;
+      }
+
+      // ===== 手动导入状态栏HTML（用户从AI回复复制代码块后粘贴）=====
+      function showManualImportSB() {
+        var overlay = doc.createElement('div');
+        overlay.className = 'sb-import-overlay';
+        overlay.innerHTML =
+          '<div class="sb-import-modal">' +
+            '<div class="sb-import-header">' +
+              '<h3>' + svgIcon('download', 16) + ' 手动导入状态栏HTML</h3>' +
+              '<button class="icon-btn icon-btn-square" id="sbImportClose" aria-label="关闭" title="关闭">' + svgIcon('close', 16) + '</button>' +
+            '</div>' +
+            '<div class="sb-import-body">' +
+              '<div class="sb-hint">📋 从AI回复中复制状态栏HTML代码块（包括 ```html 标记），粘贴到下方文本框，点击保存即可。<br>💡 提示：鼠标悬停在AI消息上会出现「复制」按钮，可一键复制完整内容。</div>' +
+              '<textarea id="sbImportTextarea" placeholder="在此粘贴```html代码块...\n\n例如：\n```html\n&lt;!doctype html&gt;\n&lt;html&gt;\n...\n&lt;/html&gt;\n```"></textarea>' +
+              '<div class="sb-hint" style="color:var(--amber-text)">⚠️ 如已存在状态栏正则（正则6），保存后会覆盖更新。<br>无需手动填写正则配置，系统会自动设置 findRegex=/&lt;StatusPlaceHolderImpl\/&gt;/g</div>' +
+            '</div>' +
+            '<div class="sb-import-footer">' +
+              '<button class="btn" id="sbImportCancel">取消</button>' +
+              '<button class="btn btn-primary" id="sbImportSave">' + svgIcon('save', 14) + ' 保存为正则6</button>' +
+            '</div>' +
+          '</div>';
+        doc.body.appendChild(overlay);
+        function closeImport() { if (overlay.parentNode) overlay.remove(); }
+        doc.getElementById('sbImportClose').addEventListener('click', closeImport);
+        doc.getElementById('sbImportCancel').addEventListener('click', closeImport);
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) closeImport(); });
+        doc.getElementById('sbImportSave').addEventListener('click', function() {
+          var ta = doc.getElementById('sbImportTextarea');
+          if (!ta) return;
+          var raw = ta.value.trim();
+          if (!raw) { showToast('⚠️ 请先粘贴状态栏HTML代码', 'warning'); return; }
+          // 自动从 ```html/``` 包裹中提取纯HTML
+          var extracted = raw;
+          var htmlMatch = raw.match(/```html\s*\n([\s\S]*?)\n```/i);
+          if (htmlMatch) {
+            extracted = htmlMatch[1];
+          } else {
+            var genericMatch = raw.match(/```\s*\n([\s\S]*?)\n```/);
+            if (genericMatch) extracted = genericMatch[1];
+          }
+          if (extracted.length < 50) { showToast('⚠️ 提取的HTML内容过短，请确认粘贴了完整的代码块', 'warning'); return; }
+          var saved = saveStatusBarToCard(extracted);
+          if (saved) {
+            showToast('✅ 状态栏已手动导入并保存为正则6！', 'success');
+            progress = calcProgress();
+            renderPreview();
+            closeImport();
+          } else {
+            showToast('❌ 保存失败，请确认内容格式正确', 'error');
+          }
+        });
+      }
+
+      // ===== 手动查看/编辑 MVU 状态栏正则 =====
+      function showRegexEditor() {
+        var existingRx = (cardData.extensions && cardData.extensions.regex_scripts) || [];
+        var sbRx = null;
+        for (var ri = 0; ri < existingRx.length; ri++) {
+          var r = existingRx[ri];
+          if (r.id === 'mvu-status-bar' ||
+              ((r.findRegex || '').indexOf('StatusPlaceHolder') >= 0 && r.markdownOnly && !r.promptOnly)) {
+            sbRx = r;
+            break;
+          }
+        }
+        var currentHtml = sbRx ? (sbRx.replaceString || '') : '';
+        var hasExisting = !!sbRx;
+
+        var overlay = doc.createElement('div');
+        overlay.className = 'sb-import-overlay';
+        overlay.innerHTML =
+          '<div class="sb-import-modal">' +
+            '<div class="sb-import-header">' +
+              '<h3>' + svgIcon('sliders', 16) + ' MVU状态栏正则 ' + (hasExisting ? '(🟢 已存在)' : '(🔴 未生成)') + '</h3>' +
+              '<button class="icon-btn icon-btn-square" id="rxEditorClose" aria-label="关闭" title="关闭">' + svgIcon('close', 16) + '</button>' +
+            '</div>' +
+            '<div class="sb-import-body">' +
+              '<div class="sb-hint">📝 这里是 <strong>[美化]MVU状态栏（正则6）</strong> 的替换内容（replaceString）。<br>下方文本框中的内容即状态栏HTML，你可以直接编辑修改。</div>' +
+              '<textarea id="rxEditorTextarea" style="min-height:300px">' + (currentHtml ? currentHtml.replace(/`/g, '\\`').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '') + '</textarea>' +
+              (hasExisting ?
+                '<div class="sb-hint">findRegex: ' + (sbRx.findRegex || '/<StatusPlaceHolderImpl\\/>/g') + ' | markdownOnly: true | promptOnly: false</div>' :
+                '<div class="sb-hint" style="color:var(--amber-text)">⚠️ 尚未生成状态栏正则，你可以粘贴HTML代码创建新的。</div>'
+              ) +
+            '</div>' +
+            '<div class="sb-import-footer">' +
+              '<button class="btn" id="rxEditorCancel">取消</button>' +
+              '<button class="btn btn-primary" id="rxEditorDelete" style="background:var(--terra);border-color:var(--terra)">' + svgIcon('trash', 14) + ' 删除此正则</button>' +
+              '<button class="btn btn-primary" id="rxEditorSave">' + svgIcon('save', 14) + ' 保存修改</button>' +
+            '</div>' +
+          '</div>';
+        doc.body.appendChild(overlay);
+
+        function closeEditor() { if (overlay.parentNode) overlay.remove(); }
+        doc.getElementById('rxEditorClose').addEventListener('click', closeEditor);
+        doc.getElementById('rxEditorCancel').addEventListener('click', closeEditor);
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) closeEditor(); });
+
+        doc.getElementById('rxEditorSave').addEventListener('click', function() {
+          var ta = doc.getElementById('rxEditorTextarea');
+          if (!ta) return;
+          var newHtml = ta.value.trim();
+          if (!newHtml) { showToast('⚠️ 内容不能为空', 'warning'); return; }
+          // 解码HTML实体
+          var decoded = newHtml.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&#039;/g, "'").replace(/&quot;/g, '"');
+          var cleaned = decoded;
+          var codeMatch = decoded.match(/```(?:html)?\s*\n([\s\S]*?)\n```/i);
+          if (codeMatch) cleaned = codeMatch[1];
+          var saved = saveStatusBarToCard(cleaned);
+          if (saved) {
+            showToast('✅ 状态栏正则已更新！', 'success');
+            progress = calcProgress();
+            renderPreview();
+            closeEditor();
+          } else {
+            showToast('❌ 保存失败', 'error');
+          }
+        });
+
+        doc.getElementById('rxEditorDelete').addEventListener('click', function() {
+          if (!confirm('确定删除[美化]MVU状态栏（正则6）吗？')) return;
+          if (cardData.extensions && cardData.extensions.regex_scripts) {
+            cardData.extensions.regex_scripts = cardData.extensions.regex_scripts.filter(function(rx) {
+              return !(rx.id === 'mvu-status-bar' ||
+                ((rx.findRegex || '').indexOf('StatusPlaceHolder') >= 0 && rx.markdownOnly && !rx.promptOnly));
+            });
+          }
+          showToast('🗑️ 状态栏正则已删除', 'success');
+          progress = calcProgress();
+          renderPreview();
+          closeEditor();
+        });
       }
 
       // ===== 进入MVU Tab时自动注入固定资产（bundle.js + 正则1-5）=====
