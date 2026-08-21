@@ -11969,7 +11969,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               var rxName = op.key.replace(/^regex:\s*/i, '').trim();
               var rxList = cd.extensions.regex_scripts;
               // 固定MVU正则拦截（正则1-5由写卡器自动注入，AI无权修改）
-              var _isFixedRx = isFixedMvuRegex({ id: rxName, scriptName: rxName, name: rxName });
+              var _fixedRxIds = { 'd668c8a6-fa6a-444d-a5d6-8f68b73a3c36':1, '5bb4b588-23ca-4564-8df5-882104eff764':1, '6fb572ae-a9ea-436d-9779-ad100f1ff7f5':1, 'bf1b7441-5cf1-426d-bd6c-911332be9923':1, 'mvu-status-hide':1 };
+              var _isFixedRx = _fixedRxIds[rxName.toLowerCase()] || /^(仅格式思维链|只发送最新2楼的变量更新|\[美化\]变量完成|\[美化\]变量更新中|\[不发送\]隐藏状态栏标记)$/i.test(rxName);
               if (_isFixedRx) {
                 console.warn('[opblock] 拦截固定MVU正则修改:', rxName);
                 return;
@@ -12185,7 +12186,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                 var match = (rx.id || '').toLowerCase() === delRxName.toLowerCase() ||
                             (rx.scriptName || '').toLowerCase() === delRxName.toLowerCase() ||
                             (rx.name || '').toLowerCase() === delRxName.toLowerCase();
-                if (match && isFixedMvuRegex(rx)) {
+                if (match && (_fixedRxIds[rx.id] || /^(仅格式思维链|只发送最新2楼的变量更新|\[美化\]变量完成|\[美化\]变量更新中|\[不发送\]隐藏状态栏标记)$/i.test(rx.scriptName || rx.name || ''))) {
                   console.warn('[opblock] 拦截固定MVU正则删除:', delRxName);
                   return true; // 保留
                 }
@@ -12289,14 +12290,14 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (!aiText) return false;
         // 匹配所有 ```html 代码块
         var htmlBlocks = [];
-        var htmlRe = /```html\s*\n([\s\S]*?)\n```/gi;
+        var htmlRe = /```html\r?\n([\s\S]*?)\r?\n```/gi;
         var m;
         while ((m = htmlRe.exec(aiText)) !== null) {
           htmlBlocks.push(m[1]);
         }
         // 也匹配无语言标记的 ``` 代码块（可能含HTML）
         if (htmlBlocks.length === 0) {
-          var genericRe = /```\s*\n([\s\S]*?)\n```/g;
+          var genericRe = /```\r?\n([\s\S]*?)\r?\n```/g;
           while ((m = genericRe.exec(aiText)) !== null) {
             if (m[1].indexOf('<html') >= 0 || m[1].indexOf('<!doctype') >= 0 || m[1].indexOf('<head') >= 0 || m[1].indexOf('<style') >= 0) {
               htmlBlocks.push(m[1]);
