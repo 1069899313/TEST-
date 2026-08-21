@@ -1065,11 +1065,22 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
   function initTheme(doc) {
     var saved = getSavedTheme();
     setTheme(doc, saved);
-    // 绑定主题切换按钮
+    rebindThemeToggle(doc);
+  }
+
+  /** 在 DOM 重建后重新绑定主题切换按钮的事件与图标 */
+  function rebindThemeToggle(doc) {
+    if (!doc) doc = document;
     var btn = doc.getElementById('themeToggle');
-    if (btn) {
-      btn.addEventListener('click', function() { toggleTheme(doc); });
-    }
+    if (!btn) return;
+    // 移除旧监听（用新监听替换，避免多次绑定时重复触发）
+    var clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.addEventListener('click', function() { toggleTheme(doc); });
+    // 同步图标
+    var root = doc.documentElement;
+    var isDark = root.getAttribute('data-theme') === 'dark';
+    clone.innerHTML = svgIcon(isDark ? 'sun' : 'moon', 16);
   }
 
 
@@ -8585,6 +8596,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           contBtn.style.display = 'inline-block';
           contBtn.addEventListener('click', continueFromSave);
         }
+        rebindThemeToggle(doc);
       }
 
       function renderChatUI() {
@@ -9511,6 +9523,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             switchTab(targetTab);
           });
         }
+        rebindThemeToggle(doc);
       }
 
       function updateCharCount() {
@@ -11951,6 +11964,78 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               return;
             }
 
+            // ===== regex 操作：修改 extensions.regex_scripts =====
+            if (op.key && /^regex:/i.test(op.key)) {
+              var rxName = op.key.replace(/^regex:\s*/i, '').trim();
+              var rxList = cd.extensions.regex_scripts;
+              // 固定MVU正则拦截（正则1-5由写卡器自动注入，AI无权修改）
+              var _isFixedRx = isFixedMvuRegex({ id: rxName, scriptName: rxName, name: rxName });
+              if (_isFixedRx) {
+                console.warn('[opblock] 拦截固定MVU正则修改:', rxName);
+                return;
+              }
+              // 解析块体中的元信息行（findRegex / markdownOnly / promptOnly / placement 等）
+              var rxMeta = {};
+              var rxBodyLines = (op.content || '').split(/\r?\n/);
+              var rxBodyStart = 0;
+              for (var rli = 0; rli < rxBodyLines.length; rli++) {
+                var rline = rxBodyLines[rli].trim();
+                if (rline === '') { rxBodyStart = rli + 1; break; }
+                var req = rline.indexOf('=');
+                if (req < 1) { rxBodyStart = rli; break; }
+                var rk = rline.substring(0, req).trim().toLowerCase();
+                var rv = rline.substring(req + 1).trim();
+                if (rk === 'findregex' || rk === 'find_regex' || rk === 'findRegex') rxMeta.findRegex = rv;
+                else if (rk === 'markdownonly' || rk === 'markdown_only') rxMeta.markdownOnly = /^(true|1|yes)$/i.test(rv);
+                else if (rk === 'promptonly' || rk === 'prompt_only') rxMeta.promptOnly = /^(true|1|yes)$/i.test(rv);
+                else if (rk === 'placement') { try { rxMeta.placement = JSON.parse(rv); } catch(e) { rxMeta.placement = [2]; } }
+                else if (rk === 'substituteregex' || rk === 'substitute_regex') rxMeta.substituteRegex = parseInt(rv) || 0;
+                else if (rk === 'runonedit' || rk === 'run_on_edit') rxMeta.runOnEdit = /^(true|1|yes)$/i.test(rv);
+                else if (rk === 'disabled') rxMeta.disabled = /^(true|1|yes)$/i.test(rv);
+                else if (rk === 'id') rxMeta.id = rv;
+                else if (rk === 'scriptname' || rk === 'script_name' || rk === 'name') rxMeta.scriptName = rv;
+              }
+              var rxContent = rxBodyLines.slice(rxBodyStart).join('\n').trim();
+              // 查找现有正则脚本：按 id 或 scriptName 匹配
+              var rxFoundIdx = -1;
+              for (var rxi = 0; rxi < rxList.length; rxi++) {
+                if ((rxList[rxi].id || '').toLowerCase() === rxName.toLowerCase() ||
+                    (rxList[rxi].scriptName || '').toLowerCase() === rxName.toLowerCase() ||
+                    (rxList[rxi].name || '').toLowerCase() === rxName.toLowerCase()) {
+                  rxFoundIdx = rxi; break;
+                }
+              }
+              if (rxFoundIdx >= 0) {
+                // 更新现有正则
+                var updatedRx = Object.assign({}, rxList[rxFoundIdx], rxMeta);
+                if (rxContent) updatedRx.replaceString = rxContent;
+                rxList[rxFoundIdx] = updatedRx;
+                modified = true;
+                changeLog.updated++;
+              } else if (op.action === 'upsert') {
+                // 新增正则
+                var newRx = {
+                  id: rxMeta.id || ('regex-' + Date.now() + '-' + Math.floor(Math.random() * 10000)),
+                  scriptName: rxMeta.scriptName || rxName,
+                  findRegex: rxMeta.findRegex || '',
+                  replaceString: rxContent || '',
+                  markdownOnly: rxMeta.markdownOnly || false,
+                  promptOnly: rxMeta.promptOnly || false,
+                  placement: rxMeta.placement || [2],
+                  runOnEdit: rxMeta.runOnEdit || false,
+                  disabled: rxMeta.disabled || false,
+                  substituteRegex: rxMeta.substituteRegex || 0,
+                  trimStrings: [],
+                  minDepth: null,
+                  maxDepth: null
+                };
+                rxList.push(newRx);
+                modified = true;
+                changeLog.added++;
+              }
+              return;
+            }
+
             var nk = _opNormKey(op.key);
             if (!nk) { console.warn('[opblock] 跳过空key'); return; }
 
@@ -12091,6 +12176,29 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               return;
             }
 
+            // ===== regex 删除：删除 extensions.regex_scripts 中的条目 =====
+            if (op.key && /^regex:/i.test(op.key)) {
+              var delRxName = op.key.replace(/^regex:\s*/i, '').trim();
+              var delRxList = cd.extensions.regex_scripts;
+              var delRxCount = 0;
+              cd.extensions.regex_scripts = delRxList.filter(function(rx) {
+                var match = (rx.id || '').toLowerCase() === delRxName.toLowerCase() ||
+                            (rx.scriptName || '').toLowerCase() === delRxName.toLowerCase() ||
+                            (rx.name || '').toLowerCase() === delRxName.toLowerCase();
+                if (match && isFixedMvuRegex(rx)) {
+                  console.warn('[opblock] 拦截固定MVU正则删除:', delRxName);
+                  return true; // 保留
+                }
+                if (match) delRxCount++;
+                return !match;
+              });
+              if (delRxCount > 0) {
+                modified = true;
+                changeLog.deleted += delRxCount;
+              }
+              return;
+            }
+
             var dk = _opNormKey(op.key);
             if (!dk) { console.warn('[opblock] delete空key'); return; }
             var removeCount = 0;
@@ -12190,7 +12298,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (htmlBlocks.length === 0) {
           var genericRe = /```\s*\n([\s\S]*?)\n```/g;
           while ((m = genericRe.exec(aiText)) !== null) {
-            if (m[1].indexOf('<html') >= 0 || m[1].indexOf('<!doctype') >= 0 || m[1].indexOf('<head') >= 0) {
+            if (m[1].indexOf('<html') >= 0 || m[1].indexOf('<!doctype') >= 0 || m[1].indexOf('<head') >= 0 || m[1].indexOf('<style') >= 0) {
               htmlBlocks.push(m[1]);
             }
           }
@@ -12201,12 +12309,16 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         var blockBlacklist = ['<statusblock>', '</statusblock>', '信息完整度', '需要您补充的信息',
                               '基础公理', '交互软规则', '核心铁则', '```json', '```js', '```yaml',
                               'character_book', 'entries', 'comment', 'insertion_order'];
-        // 状态栏HTML专属特征：必须出现HTML结构 + 多个渲染相关特征词才认定
+        // 状态栏HTML专属特征：必须出现HTML结构（不要求严格个数，有<style>或<script>即可）
         var mustHaveStructure = ['<!doctype', '<html', '<style', '<script'];
+        // 状态栏/界面特征词——只要命中1个即认为可能是状态栏
         var statusBarKeywords = ['StatusPlaceHolderImpl', 'render-root', 'stat_data', 'waitGlobalInitialized',
                                  'getAllVariables', 'mvu-status', 'card-body', 'refreshStatus', 'renderTree',
                                  'matrix-card', 'matrix-grid', 'm-bar-wrap', '.m-label', '.m-value',
-                                 'renderVars', 'loadVars', 'mvu-matrix-ui', 'mvu-status-card'];
+                                 'renderVars', 'loadVars', 'mvu-matrix-ui', 'mvu-status-card',
+                                 'populateCharacterData', 'eventOn', 'VARIABLE_UPDATE_ENDED', 'errorCatched',
+                                 'stat-bar', 'status-bar', 'status_bar', 'status-panel', 'statusPanel',
+                                 'variableDisplay', 'varDisplay', 'renderStatus'];
         var statusBarHtml = null;
         for (var i = 0; i < htmlBlocks.length; i++) {
           var block = htmlBlocks[i];
@@ -12216,18 +12328,25 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             if (block.indexOf(blockBlacklist[b]) >= 0) { hitBlack = true; break; }
           }
           if (hitBlack) continue;
-          // 结构验证：至少出现2个HTML结构标签（非单纯CSS/JS碎片）
+          // 结构验证：至少出现1个HTML结构标签（非纯文本），有<style>或<script>即满足
           var structCount = 0;
           for (var s = 0; s < mustHaveStructure.length; s++) {
             if (block.indexOf(mustHaveStructure[s]) >= 0) structCount++;
           }
-          if (structCount < 2) continue;
-          // 特征关键词：至少4个才认为是状态栏HTML（避免误匹配MVU schema等内容）
+          // 即使没有显式HTML标签，只要包含 <div 或 <body 也视为结构
+          if (block.indexOf('<div') >= 0 || block.indexOf('<body') >= 0 || block.indexOf('<table') >= 0) structCount++;
+          if (structCount < 1) continue;
+          // 特征关键词：至少1个即认为是状态栏HTML（放宽条件，只要看起来像HTML+有关键词就收）
           var matchCount = 0;
           for (var k = 0; k < statusBarKeywords.length; k++) {
             if (block.indexOf(statusBarKeywords[k]) >= 0) matchCount++;
           }
-          if (matchCount >= 4) {
+          // 如果没有任何特征词但确实是```html块且有完整HTML结构，也接受
+          if (matchCount < 1 && structCount >= 2) {
+            // 纯HTML结构块也算（用户可能直接写了个简单状态栏）
+            matchCount = 1; // 视为通过
+          }
+          if (matchCount >= 1) {
             // 清理字面量转义字符
             var cleaned = block;
             if (cleaned.indexOf('\\n') >= 0) cleaned = cleaned.replace(/\\n/g, '\n');
