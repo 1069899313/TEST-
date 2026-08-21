@@ -1,6 +1,6 @@
 (function() {
 /* ============================================================================
- * 时之写卡器 · Tavern Helper 脚本（整理版1350）
+ * 时之写卡器 · Tavern Helper 脚本（整理版）
  * ----------------------------------------------------------------------------
  * 项目类型：后台脚本（Tavern Helper Script · 相当于模板里的 index.ts）
  * 运行形式：单文件 JS，导入到酒馆脚本库，点击脚本按钮打开写卡器
@@ -477,6 +477,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 .chat-msg:hover .msg-toolbar{opacity:1}
 .msg-toolbar .msg-copy-btn{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;font-size:.72em;color:var(--muted);background:var(--surface);border:1px solid var(--line-soft);border-radius:6px;cursor:pointer;transition:all .15s ease;font-family:inherit}
 .msg-toolbar .msg-copy-btn:hover{color:var(--accent-deep);border-color:var(--accent-border);background:var(--accent-soft)}
+.msg-toolbar .msg-copy-btn-html{border-color:var(--accent-border);color:var(--accent-deep)}
+.msg-toolbar .msg-copy-btn-html:hover{background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent-soft)}
 
 /* 手动导入/编辑 弹窗 */
 .sb-import-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:10001;padding:16px}
@@ -783,6 +785,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 .cp-section-label{font-size:.78em;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cp-section-preview{font-size:.72em;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
 .cp-section-toggle{font-size:.68em;color:var(--accent);flex-shrink:0;padding:0 4px}
+.cp-section-copy{display:inline-flex;align-items:center;gap:3px;font-size:.66em;color:var(--muted);background:var(--surface);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;cursor:pointer;flex-shrink:0;transition:all .15s ease;font-family:inherit}
+.cp-section-copy:hover{color:var(--accent-deep);border-color:var(--accent-border);background:var(--accent-soft)}
 .cp-section-body{padding:8px 12px 10px 28px;font-size:.88em;line-height:1.7;white-space:pre-wrap;word-break:break-word}
 .cp-section-body.collapsed{display:none}
 /* section 类型着色 */
@@ -8815,6 +8819,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               var btn = doc.getElementById('exportLogBtn');
               if (btn) btn.click();
             } else if (action === 'import-card') showImportModal();
+            else if (action === 'manual-import-sb') showManualImportSB();
+            else if (action === 'edit-sb-regex') showRegexEditor();
             else if (action === 'qa-summary') handleQuickAction('summary');
             else if (action === 'qa-qc') handleQuickAction('qc');
             else if (action === 'qa-optimize') handleQuickAction('optimize');
@@ -10314,9 +10320,11 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             // Phase C：状态栏已生成
             actions.push({ action: 'mvuPreview',      icon: 'eye',     label: '预览状态栏', hl: true });
             actions.push({ action: 'start_sb',        icon: 'refreshCycle', label: '重新生成' });
-            actions.push({ action: 'manual-import-sb', icon: 'download', label: '手动导入' });
             actions.push({ action: 'reset_sb',        icon: 'trash',   label: '清除状态栏' });
           }
+          // ===== 状态栏手动工具：无论哪一阶段都常驻（AI自动识别靠不住时的兜底） =====
+          actions.push({ action: 'manual-import-sb', icon: 'download', label: '手动导入状态栏' });
+          actions.push({ action: 'edit-sb-regex',    icon: 'sliders', label: '编辑状态栏正则' });
         }
         var h = '';
         actions.forEach(function(a) {
@@ -10453,6 +10461,15 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           showToast('✅ 已清除状态栏正则，可重新生成', 'success');
           return;
         }
+        // ===== 状态栏手动导入 / 编辑正则（任何Tab、任何阶段都可用，不依赖AI自动识别）=====
+        if (action === 'manual-import-sb') {
+          showManualImportSB();
+          return;
+        }
+        if (action === 'edit-sb-regex') {
+          showRegexEditor();
+          return;
+        }
 
         // 通用动作（两个Tab都可以用，但行为不同）
         if (action === 'qc') { showQualityCheck(); return; }
@@ -10516,16 +10533,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           // 如果在MVU Tab点了角色卡Tab才有的动作（应该被上面的跳转拦住了，兜底防止意外）
           showToast('⚠️ 该动作仅在「角色卡生成」Tab中可用', 'warning');
         }
-        // ===== 状态栏手动导入 / 编辑正则 =====
-        if (action === 'manual-import-sb') {
-          showManualImportSB();
-          return;
         }
-        if (action === 'edit-sb-regex') {
-          showRegexEditor();
-          return;
-        }
-      }
 
       // 队列模式：callAIChat处理期间，addAssistantMsg的调用改为收集到队列，最后合并为一条消息
       var _aiChatNotesQueue = [];
@@ -10650,26 +10658,57 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           // 添加复制工具条（AI消息底部）
           var toolbar = doc.createElement('div');
           toolbar.className = 'msg-toolbar';
-          var copyBtn = doc.createElement('button');
-          copyBtn.className = 'msg-copy-btn';
-          copyBtn.innerHTML = svgIcon('copy', 12) + ' 复制内容';
-          copyBtn.addEventListener('click', function() {
-            var raw = bubbleDiv ? bubbleDiv.getAttribute('data-raw-text') : '';
-            if (!raw) { showToast('无可复制的内容', 'warning'); return; }
+          // 通用剪贴板写入辅助
+          function doCopyText(text, okMsg) {
+            if (!text) { showToast('无可复制的内容', 'warning'); return; }
             try {
               var ta = doc.createElement('textarea');
-              ta.value = raw;
+              ta.value = text;
               doc.body.appendChild(ta);
               ta.select();
               doc.execCommand('copy');
               doc.body.removeChild(ta);
-              showToast('✅ 已复制到剪贴板', 'success');
+              showToast(okMsg || '✅ 已复制到剪贴板', 'success');
             } catch(e) {
-              // fallback
-              try { navigator.clipboard.writeText(raw).then(function() { showToast('✅ 已复制到剪贴板', 'success'); }); } catch(e2) { showToast('❌ 复制失败', 'error'); }
+              try { navigator.clipboard.writeText(text).then(function() { showToast(okMsg || '✅ 已复制到剪贴板', 'success'); }); } catch(e2) { showToast('❌ 复制失败', 'error'); }
             }
+          }
+          // 按钮1：复制全文
+          var copyBtn = doc.createElement('button');
+          copyBtn.className = 'msg-copy-btn';
+          copyBtn.innerHTML = svgIcon('copy', 12) + ' 复制全文';
+          copyBtn.addEventListener('click', function() {
+            var raw = bubbleDiv ? bubbleDiv.getAttribute('data-raw-text') : '';
+            doCopyText(raw, '✅ 已复制整条消息');
           });
           toolbar.appendChild(copyBtn);
+          // 按钮2：一键复制状态栏HTML代码块（含```html围栏，可直接粘贴到手动导入）
+          var htmlBtn = doc.createElement('button');
+          htmlBtn.className = 'msg-copy-btn msg-copy-btn-html';
+          htmlBtn.innerHTML = svgIcon('code', 12) + ' 复制HTML块';
+          htmlBtn.title = '一键复制消息里的```html状态栏代码块（含围栏标记），可直接用于手动导入';
+          htmlBtn.addEventListener('click', function() {
+            var raw = bubbleDiv ? bubbleDiv.getAttribute('data-raw-text') : '';
+            if (!raw) { showToast('无可复制的内容', 'warning'); return; }
+            var fenceRe = /(`{3,4})[ \t]*html[ \t]*\r?\n([\s\S]*?)\r?\n\1/gi;
+            fenceRe.lastIndex = 0;
+            var fm = fenceRe.exec(raw);
+            if (fm) {
+              doCopyText('```html\n' + fm[2].trim() + '\n```', '✅ 已复制状态栏HTML代码块');
+            } else {
+              // 没有```html标记：尝试无语言```块中含HTML文档的
+              var plainRe = /(`{3,4})[ \t]*\r?\n([\s\S]*?)\r?\n\1/g;
+              plainRe.lastIndex = 0;
+              var pm;
+              var found = null;
+              while ((pm = plainRe.exec(raw)) !== null) {
+                if (pm[2].indexOf('<html') >= 0 || pm[2].indexOf('<!doctype') >= 0) { found = pm[2]; break; }
+              }
+              if (found) doCopyText('```html\n' + found.trim() + '\n```', '✅ 已复制状态栏HTML代码块');
+              else showToast('⚠️ 这条消息里没有找到HTML代码块', 'warning');
+            }
+          });
+          toolbar.appendChild(htmlBtn);
           div.appendChild(toolbar);
         }
         scrollChat();
@@ -11106,6 +11145,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       }
       // ===== 消息 section 分区渲染（参考专家工作区设计）=====
       var cpSectionStates = {};
+      var cpSectionCopyMap = {};  // stateKey → 该section的原始文本（供分段复制按钮使用）
       function parseMessageSections(text) {
         var sections = [];
         var thinkingRe = /(?:<thinking>|<reasoning>|<think>)([\s\S]*?)(?:<\/thinking>|<\/reasoning>|<\/think>)|(?:\[metacognition\]|\[思维链\]|\[果农冒泡\]|\[love_qkll\])([\s\S]*?)(?:\[\/metacognition\]|\[\/思维链\]|\[\/果农冒泡\]|\[\/love_qkll\])/gi;
@@ -11210,6 +11250,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         var html = '';
         sections.forEach(function(sec, idx) {
           var stateKey = msgId + '-' + idx;
+          cpSectionCopyMap[stateKey] = sec.content || '';
           // ========== 默认收起：所有 section（思维链/正文/代码）初次渲染均为 collapsed ==========
           // cpSectionStates[key] === true  → 用户已手动展开
           // cpSectionStates[key] === false → 用户已手动收起
@@ -11235,6 +11276,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           html += '<span class="cp-section-icon">' + icon + '</span>';
           html += '<span class="cp-section-label">' + label + '</span>';
           if (isCollapsed && preview) html += '<span class="cp-section-preview">' + preview + '...</span>';
+          html += '<span class="cp-section-copy" title="复制此段内容" data-copy-key="' + stateKey + '">' + svgIcon('copy', 11) + ' 复制此段</span>';
           html += '<span class="cp-section-toggle">' + (isCollapsed ? '展开' : '收起') + '</span>';
           html += '</div>';
           if (!isCollapsed) {
@@ -11280,6 +11322,29 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               }
             });
           })(headers[i]);
+        }
+        // ===== 分段复制按钮：复制该section的原始文本（代码块/正文/思维链各自独立复制） =====
+        var copyBtns = container.querySelectorAll('.cp-section-copy');
+        for (var ci = 0; ci < copyBtns.length; ci++) {
+          (function(btn) {
+            btn.addEventListener('click', function(e) {
+              if (e) e.stopPropagation();
+              var key = btn.getAttribute('data-copy-key');
+              var text = cpSectionCopyMap[key] || '';
+              if (!text) { showToast('⚠️ 该段内容为空', 'warning'); return; }
+              try {
+                var ta = doc.createElement('textarea');
+                ta.value = text;
+                doc.body.appendChild(ta);
+                ta.select();
+                doc.execCommand('copy');
+                doc.body.removeChild(ta);
+                showToast('✅ 已复制该段内容', 'success');
+              } catch(err) {
+                try { navigator.clipboard.writeText(text).then(function() { showToast('✅ 已复制该段内容', 'success'); }); } catch(e2) { showToast('❌ 复制失败', 'error'); }
+              }
+            });
+          })(copyBtns[ci]);
         }
       }
       function fmtBubble(t) {
@@ -12347,79 +12412,82 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       // 此时extractJSON提取不到，需要这个兜底机制把HTML保存到cardData.extensions.regex_scripts
       function tryExtractStatusBarHtml(aiText) {
         if (!aiText) return false;
-        // 匹配所有 ```html 代码块
-        var htmlBlocks = [];
-        var htmlRe = /```html\r?\n([\s\S]*?)\r?\n```/gi;
-        var m;
-        while ((m = htmlRe.exec(aiText)) !== null) {
-          htmlBlocks.push(m[1]);
-        }
-        // 也匹配无语言标记的 ``` 代码块（可能含HTML）
-        if (htmlBlocks.length === 0) {
-          var genericRe = /```\r?\n([\s\S]*?)\r?\n```/g;
-          while ((m = genericRe.exec(aiText)) !== null) {
-            if (m[1].indexOf('<html') >= 0 || m[1].indexOf('<!doctype') >= 0 || m[1].indexOf('<head') >= 0 || m[1].indexOf('<style') >= 0) {
-              htmlBlocks.push(m[1]);
-            }
-          }
-        }
-        if (htmlBlocks.length === 0) return false;
+        // ================= 超宽松提取策略 =================
+        // 原则：MVU Tab 里用户让AI"生成/修改状态栏"，AI输出```html完整文档即可直接接收。
+        // 不再依赖MVU关键字命中（那是之前偶尔漏检的原因），只保留两道安全闸门：
+        //   1) 黑名单过滤（进度块/世界书碎片/JSON块等明显不是状态栏的内容）
+        //   2) 最少HTML结构验证（要有<!doctype/<html/<head 等文档级标记）
+        // 两种围栏（3反引号 / 4反引号）与任意语言标签都兼容。
 
         // 强负面关键词：含这些内容一定不是状态栏HTML（是写卡器进度块/世界书条目碎片等）
         var blockBlacklist = ['<statusblock>', '</statusblock>', '信息完整度', '需要您补充的信息',
                               '基础公理', '交互软规则', '核心铁则', '```json', '```js', '```yaml',
-                              'character_book', 'entries', 'comment', 'insertion_order'];
-        // 状态栏HTML专属特征：必须出现HTML结构（不要求严格个数，有<style>或<script>即可）
-        var mustHaveStructure = ['<!doctype', '<html', '<style', '<script'];
-        // 状态栏/界面特征词——只要命中1个即认为可能是状态栏
-        var statusBarKeywords = ['StatusPlaceHolderImpl', 'render-root', 'stat_data', 'waitGlobalInitialized',
-                                 'getAllVariables', 'mvu-status', 'card-body', 'refreshStatus', 'renderTree',
-                                 'matrix-card', 'matrix-grid', 'm-bar-wrap', '.m-label', '.m-value',
-                                 'renderVars', 'loadVars', 'mvu-matrix-ui', 'mvu-status-card',
-                                 'populateCharacterData', 'eventOn', 'VARIABLE_UPDATE_ENDED', 'errorCatched',
-                                 'stat-bar', 'status-bar', 'status_bar', 'status-panel', 'statusPanel',
-                                 'variableDisplay', 'varDisplay', 'renderStatus'];
-        var statusBarHtml = null;
-        for (var i = 0; i < htmlBlocks.length; i++) {
-          var block = htmlBlocks[i];
-          // 黑名单过滤：直接跳过含进度块/世界书碎片的代码块
-          var hitBlack = false;
-          for (var b = 0; b < blockBlacklist.length; b++) {
-            if (block.indexOf(blockBlacklist[b]) >= 0) { hitBlack = true; break; }
-          }
-          if (hitBlack) continue;
-          // 结构验证：至少出现1个HTML结构标签（非纯文本），有<style>或<script>即满足
+                              'character_book', 'insertion_order'];
+        // HTML文档级结构标记（命中其一即视为完整HTML，通常2个以上）
+        var docStructure = ['<!doctype', '<html', '<head', '<body', '<style', '<script'];
+
+        // 收集所有符合围栏格式的代码块（3~4个反引号 + 可选语言标签）
+        var candidates = [];
+        var fenceRe = /(`{3,4})[ \t]*([\w-]*)[ \t]*\r?\n([\s\S]*?)\r?\n\1/g;
+        var m;
+        while ((m = fenceRe.exec(aiText)) !== null) {
+          candidates.push({ lang: (m[2] || '').toLowerCase(), body: m[3] });
+        }
+        if (candidates.length === 0) {
+          // 完全没代码块也要兜底：直接看整段文本是否本身就是HTML文档（少数AI不带围栏输出）
+          candidates.push({ lang: '', body: aiText });
+        }
+
+        // 判断一个代码块是否是"完整HTML文档"（不依赖状态栏关键字）
+        function isHtmlDocBlock(block) {
+          if (block.indexOf('<!doctype html') >= 0 || block.indexOf('<html') >= 0) return true;
           var structCount = 0;
-          for (var s = 0; s < mustHaveStructure.length; s++) {
-            if (block.indexOf(mustHaveStructure[s]) >= 0) structCount++;
+          for (var s = 0; s < docStructure.length; s++) {
+            if (block.indexOf(docStructure[s]) >= 0) structCount++;
           }
-          // 即使没有显式HTML标签，只要包含 <div 或 <body 也视为结构
-          if (block.indexOf('<div') >= 0 || block.indexOf('<body') >= 0 || block.indexOf('<table') >= 0) structCount++;
-          if (structCount < 1) continue;
-          // 特征关键词：至少1个即认为是状态栏HTML（放宽条件，只要看起来像HTML+有关键词就收）
-          var matchCount = 0;
-          for (var k = 0; k < statusBarKeywords.length; k++) {
-            if (block.indexOf(statusBarKeywords[k]) >= 0) matchCount++;
+          // 至少2个结构标记 + 至少1个闭合标签形态，才认为是完整文档片段
+          if (structCount >= 2 && (block.indexOf('</') >= 0)) return true;
+          return false;
+        }
+        function passesBlacklist(block) {
+          for (var b = 0; b < blockBlacklist.length; b++) {
+            if (block.indexOf(blockBlacklist[b]) >= 0) return false;
           }
-          // 如果没有任何特征词但确实是```html块且有完整HTML结构，也接受
-          if (matchCount < 1 && structCount >= 2) {
-            // 纯HTML结构块也算（用户可能直接写了个简单状态栏）
-            matchCount = 1; // 视为通过
-          }
-          if (matchCount >= 1) {
-            // 清理字面量转义字符
-            var cleaned = block;
-            if (cleaned.indexOf('\\n') >= 0) cleaned = cleaned.replace(/\\n/g, '\n');
-            if (cleaned.indexOf('\\"') >= 0) cleaned = cleaned.replace(/\\"/g, '"');
-            if (cleaned.indexOf('\\\\') >= 0) cleaned = cleaned.replace(/\\\\/g, '\\');
-            statusBarHtml = cleaned;
+          return true;
+        }
+
+        // 优先：```html 标记的块
+        var picked = null;
+        for (var i = 0; i < candidates.length; i++) {
+          var c = candidates[i];
+          if (c.lang !== 'html' && c.lang !== 'htm') continue;
+          if (!isHtmlDocBlock(c.body)) continue;
+          if (!passesBlacklist(c.body)) continue;
+          picked = c.body;
+          break;
+        }
+        // 其次：无语言/其他语言（排除明显非HTML语言）的通用代码块
+        if (!picked) {
+          var skipLangs = { json:1, js:1, javascript:1, yaml:1, yml:1, css:1, txt:1, text:1, python:1, py:1 };
+          for (var j = 0; j < candidates.length; j++) {
+            var cj = candidates[j];
+            if (skipLangs[cj.lang]) continue;
+            if (!isHtmlDocBlock(cj.body)) continue;
+            if (!passesBlacklist(cj.body)) continue;
+            picked = cj.body;
             break;
           }
         }
-        if (!statusBarHtml) return false;
+        if (!picked) return false;
+
+        // 清理字面量转义字符（AI偶尔输出 JSON 转义后的 \n）
+        var cleaned = picked;
+        if (cleaned.indexOf('\\n') >= 0) cleaned = cleaned.replace(/\\n/g, '\n');
+        if (cleaned.indexOf('\\"') >= 0) cleaned = cleaned.replace(/\\"/g, '"');
+        if (cleaned.indexOf('\\\\') >= 0) cleaned = cleaned.replace(/\\\\/g, '\\');
 
         // 复用统一的保存函数，避免重复代码
-        return saveStatusBarToCard(statusBarHtml);
+        return saveStatusBarToCard(cleaned);
       }
 
       // 保存拼接好的状态栏HTML到角色卡的regex_scripts
@@ -12572,6 +12640,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             showToast('✅ 状态栏已手动导入并保存为正则6！', 'success');
             progress = calcProgress();
             renderPreview();
+            updateQuickActions();
             closeImport();
           } else {
             showToast('❌ 保存失败，请确认内容格式正确', 'error');
@@ -12638,6 +12707,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             showToast('✅ 状态栏正则已更新！', 'success');
             progress = calcProgress();
             renderPreview();
+            updateQuickActions();
             closeEditor();
           } else {
             showToast('❌ 保存失败', 'error');
@@ -12655,6 +12725,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           showToast('🗑️ 状态栏正则已删除', 'success');
           progress = calcProgress();
           renderPreview();
+          updateQuickActions();
           closeEditor();
         });
       }
