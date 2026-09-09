@@ -1,6 +1,6 @@
 (function() {
 /* ============================================================================
- * 时之写卡器 · Tavern Helper 脚本（整理版1439）
+ * 时之写卡器 · Tavern Helper 脚本（整理版）
  * ----------------------------------------------------------------------------
  * 项目类型：后台脚本（Tavern Helper Script · 相当于模板里的 index.ts）
  * 运行形式：单文件 JS，导入到酒馆脚本库，点击脚本按钮打开写卡器
@@ -1375,6 +1375,90 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     return null;
   }
 
+  // ===== 🧹 剥离 comment 最外层装饰括号（⟦⟧【】「」『』［］《》〈〉()[]{}）=====
+  // ⚠️【关键修复】这个函数原来只作为 mergePartial 内部的局部 var 存在，但顶层 _deriveEntryKeys 也在调用它，
+  //   于是 _deriveEntryKeys 每次调用都抛 ReferenceError: _stripOuterBrackets is not defined，
+  //   而所有调用点都用 try/catch 包着（"兜底"逻辑），异常被静默吞掉 —— 结果就是「自动派生触发词」从来没生效过：
+  //   触发类条目 keys 全空 → 酒馆绿灯(selective)模式下条目永远不激活。现提升为顶层共享函数。
+  function _stripOuterBrackets(s) {
+    if (!s) return '';
+    var r = String(s).trim();
+    for (var iter = 0; iter < 2; iter++) {  // 最多剥2层嵌套，如 ⟦【xxx】⟧
+      var pairs = [['⟦','⟧'],['【','】'],['「','」'],['『','』'],['［','］'],['《','》'],['〈','〉'],['(',')'],['[',']'],['{','}']];
+      var matched = false;
+      for (var pi = 0; pi < pairs.length; pi++) {
+        var L = pairs[pi][0], R = pairs[pi][1];
+        if (r.length >= 4 && r.charAt(0) === L && r.charAt(r.length - 1) === R) {
+          r = r.slice(1, -1).trim();
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) break;
+    }
+    return r;
+  }
+
+  // ===== 🩹 条目激活策略自愈（修复历史数据里"常驻条目变成死条目"的问题）=====
+  // 历史 Bug：::: upsert 新建条目时把 constant 默认写成 false，又因为 constant 非 undefined，
+  //   模板（<基础公理>/<核心铁则>/变量列表…）的 constant=true 永远兜不上 → 条目既非常驻、selective 又为 false、
+  //   keys 还为空 → 在酒馆里永远不激活（蓝灯不亮、绿灯没钥匙）。
+  // 本函数按 comment 命中模板，把这类"死条目"修回模板设计的常驻/触发策略，并补齐缺失的位置/深度/权重等参数。
+  function healEntryStrategy(entry) {
+    if (!entry || typeof entry !== 'object') return entry;
+    var comment = entry.comment || entry.name || '';
+    if (!comment) return entry;
+    var tmpl = getEntryTemplate(comment);
+    if (!tmpl) return entry;
+    if (!entry.extensions || typeof entry.extensions !== 'object') entry.extensions = {};
+    var ext = entry.extensions;
+    // 1) 常驻模板：constant=false 且 selective=false 属于"死条目"签名 → 修回常驻
+    if (tmpl.constant === true) {
+      var isDead = (entry.constant === false || entry.constant === undefined) && (entry.selective === false || entry.selective === undefined);
+      if (isDead) {
+        entry.constant = true;
+        entry.selective = false;
+        console.warn('[healEntryStrategy] 修复常驻条目激活策略:', comment);
+      }
+    }
+    // 2) 先把历史遗留的顶层 position（数字，或 'before_char' 这类字符串）迁移进 extensions.position，
+    //    否则它会被下面的模板兜底覆盖掉，用户/导入数据里设的注入位置就丢了。
+    if (entry.position !== undefined && entry.position !== null) {
+      var pv = entry.position;
+      var pnum = null;
+      if (typeof pv === 'number') pnum = pv;
+      else if (typeof pv === 'string') {
+        var pl = pv.toLowerCase();
+        pnum = (pl === 'before_char' || pl === 'before_character_definition' || pl === '0') ? 0
+             : (pl === 'after_char' || pl === 'after_character_definition' || pl === '1') ? 1
+             : (pl === 'before_an' || pl === 'before_example_messages' || pl === '2') ? 2
+             : (pl === 'after_an' || pl === 'after_example_messages' || pl === '3') ? 3
+             : (pl === 'at_depth' || pl === 'at_end' || pl === '4') ? 4 : null;
+      }
+      if (pnum !== null) {
+        if (ext.position === undefined || ext.position === null) ext.position = pnum;
+        delete entry.position;   // 顶层 position 会盖住 extensions.position，必须清掉
+      }
+    }
+    // 3) 补齐模板里声明但条目缺失的参数（不覆盖已有值）
+    var extPairs = [
+      ['position', 'position'], ['depth', 'depth'], ['probability', 'probability'],
+      ['selectiveLogic', 'selectiveLogic'], ['prevent_recursion', 'prevent_recursion'],
+      ['exclude_recursion', 'exclude_recursion'], ['delay_until_recursion', 'delay_until_recursion'],
+      ['sticky', 'sticky'], ['cooldown', 'cooldown'], ['delay', 'delay'],
+      ['match_whole_words', 'match_whole_words'], ['scan_depth', 'scan_depth'],
+      ['group', 'group'], ['group_weight', 'group_weight'], ['useProbability', 'useProbability']
+    ];
+    for (var i = 0; i < extPairs.length; i++) {
+      var dst = extPairs[i][0], src = extPairs[i][1];
+      if (ext[dst] === undefined && tmpl[src] !== undefined) ext[dst] = tmpl[src];
+    }
+    if (ext.role === undefined) ext.role = 0;
+    if (entry.insertion_order === undefined && tmpl.order !== undefined) entry.insertion_order = tmpl.order;
+    if (entry.use_regex === undefined && tmpl.use_regex !== undefined) entry.use_regex = tmpl.use_regex;
+    return entry;
+  }
+
   // ===== 🔑 自动派生触发词（写卡器兜底防线 · 对齐 StageDog 绿灯/向量化/蓝灯策略）=====
   // 仅当 keys 为空时才派生；蓝灯(constant=true)与向量化(vectorized=true)保持空不变
   function _deriveEntryKeys(comment, tmpl, content) {
@@ -1396,18 +1480,24 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (/[\u4e00-\u9fa5A-Za-z0-9]{2,}/.test(s) && !stopSet[s]) candidates.push(s);
       });
     }
-    // 2) 再从 content 前 300 字中抽取中文词组（2-6字）+ 典型实体特征词，去重追加
-    var headContent = (content || '').slice(0, 300);
+    // 2) 再从 content 里抽取"能当触发词"的短语（旧版直接切 2-6 字片段，会切出
+    //    "屋顶有一台古""行动顺序由敏"这种永远匹配不到的垃圾词，反而污染触发词表）：
+    //    只取「字段：值」行里的值 —— 人物/地点条目信息量最高（白娅、女高中生、天台观星台…）。
+    //    散文段落不再硬切片段，交给 <标签> 语义锚点兜底，触发词表更干净。
+    var headContent = (content || '').slice(0, 400);
+    var genericWordRe = /^(姓名|身份|外貌|性格|背景|关系|人际关系|物品|地点|时间|年龄|特征|爱好|特长|家庭|称呼|位置|心情|智慧|魅力|体质|状态|好感度|好感|当前|内容|说明|描述|定义|介绍|概要|摘要|标签|以上|例如|比如|如果|因为|所以|但是|并且|或者|不是|还是|这是|一个|一种|一类|一下|一些|一起)$/;
+    var pushCand = function(w) {
+      w = String(w == null ? '' : w).trim();
+      if (!w || w.length < 2 || w.length > 12) return;
+      if (stopSet[w] || genericWordRe.test(w)) return;
+      if (candidates.indexOf(w) < 0) candidates.push(w);
+    };
     try {
-      var re = /[\u4e00-\u9fa5]{2,6}|[A-Za-z][A-Za-z0-9_]{1,15}/g;
-      var mm;
-      while ((mm = re.exec(headContent)) !== null) {
-        var w = mm[0];
-        if (stopSet[w]) continue;
-        if (/^(姓名|身份|外貌|性格|背景|关系|人际关系|物品|地点|时间|年龄|特征|爱好|特长|家庭|称呼|位置|心情|智慧|魅力|体质|状态|好感度|好感|当前|内容|说明|描述|定义|介绍|概要|摘要|标签|以上|例如|比如|如果|因为|所以|但是|并且|或者|不是|还是|这是|一个|一种|一类|一下|一些|一起)$/.test(w)) continue;
-        if (candidates.indexOf(w) < 0) candidates.push(w);
-        if (candidates.length >= 12) break;
-      }
+      headContent.split(/\n/).forEach(function(line) {
+        var fm = line.match(/^[ \t]*[^：:\n]{1,10}[：:][ \t]*(.+)$/);
+        if (!fm) return;
+        fm[1].split(/[，,、；;。！!？?\/|]+/).forEach(function(seg) { pushCand(seg); });
+      });
     } catch(e) {}
     // 3) 根据 <标签前缀> 语义补齐语义锚点（典型触发词），和 StageDog 绿灯策略一致
     var categoryAnchors = {
@@ -1438,13 +1528,13 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     var vecCats = {'叙事背景':1,'故事发展':1,'文化与习俗':1,'历史事件':1,'叙事':1};
     if (!m || !vecCats[prefix] || candidates.length < 2) {}
     if (candidates.length < 1 && namePart) candidates.push(namePart);
-    // 去重 + 限制数量 3-10 个
+    // 去重 + 限制数量（ST 建议每条 3-8 个触发词，太多会过度触发、白烧 token）
     var uniq = [];
     for (var ci = 0; ci < candidates.length; ci++) {
       var c = String(candidates[ci]).trim();
       if (!c || c.length < 1 || c.length > 24) continue;
       if (uniq.indexOf(c) < 0) uniq.push(c);
-      if (uniq.length >= 10) break;
+      if (uniq.length >= 8) break;
     }
     // 向量化类：最多 2 个弱锚点就好（让向量化主要靠语义）
     if (prefix && vecCats[prefix]) {
@@ -1525,28 +1615,42 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     return result2 || content;
   }
 
-  // 判断条目是否属于MVU变量系统
+  // 判断条目是否属于MVU变量系统（严格版：只认真正的 MVU 标记）
   // 兼容大小写前缀：[InitVar]/[initvar]、[mvu_update] 等
-  // 扩展：包含8条工作流条目 + 附加条目（阶段判定/EJS/人设切换/派生字段/状态机/联动规则等）也视为MVU体系条目
+  // ⚠️【修复】旧版把「阶段判定/人设切换/派生字段/控制器/状态机/阈值触发/剧情进度/境界等级/系统模式…」
+  //   这类通用词也当成 MVU，导致角色卡Tab预览（右侧面板）用 !isMVUEntry 过滤时，
+  //   把 <核心玩法>境界等级体系、<场景机制>系统模式、<故事发展>剧情进度 等正常世界观条目整条隐藏，
+  //   用户以为"AI说加了3条，右侧只多2条"。现在这些词只算「MVU 附加条目」（isMvuExtraEntry），
+  //   只影响 MVU Tab 的显示，不再影响角色卡Tab。
   function isMVUEntry(comment) {
     var c = (comment || '').toLowerCase();
     return c.indexOf('[initvar]') >= 0 || c.indexOf('变量列表') >= 0 ||
            c.indexOf('变量更新规则') >= 0 || c.indexOf('变量输出格式') >= 0 ||
            c.indexOf('状态变量输出') >= 0 || c.indexOf('updatevariable') >= 0 ||
            c.indexOf('变量分段') >= 0 || c.indexOf('分段提示') >= 0 ||
-           c.indexOf('ejs') >= 0 ||
-           c.indexOf('状态栏') >= 0 || c.indexOf('statusplaceholder') >= 0 ||
-           c.indexOf('阶段判定') >= 0 || c.indexOf('阶段切换') >= 0 ||
+           c.indexOf('statusplaceholder') >= 0 ||
+           /(^|[^a-z])ejs([^a-z]|$)/.test(c) ||
+           c.indexOf('<状态栏>') >= 0 || c.indexOf('状态栏占位') >= 0 ||
+           c.indexOf('占位符提醒') >= 0 || c.indexOf('mvu状态栏') >= 0 ||
+           c.indexOf('mvu变量') >= 0 || c.indexOf('mvu_update') >= 0;
+  }
+
+  // MVU 附加条目（变量系统的配套功能条目，但不是8条核心工作流条目）
+  // 只用于 MVU Tab 的识别与显示，不参与角色卡Tab 的过滤
+  function isMvuExtraEntry(comment) {
+    var c = (comment || '').toLowerCase();
+    return c.indexOf('阶段判定') >= 0 || c.indexOf('阶段切换') >= 0 ||
            c.indexOf('人设切换') >= 0 || c.indexOf('人设规则') >= 0 ||
-           c.indexOf('动态注入') >= 0 || c.indexOf('派生字段') >= 0 ||
-           c.indexOf('衍生字段') >= 0 || c.indexOf('联动规则') >= 0 ||
-           c.indexOf('阈值触发') >= 0 || c.indexOf('控制器') >= 0 ||
-           c.indexOf('阶段变量') >= 0 || c.indexOf('状态机') >= 0 ||
-           c.indexOf('分阶段') >= 0 || c.indexOf('多阶段') >= 0 ||
-           c.indexOf('关系阶段') >= 0 || c.indexOf('剧情进度') >= 0 ||
-           c.indexOf('系统模式') >= 0 || c.indexOf('境界等级') >= 0 ||
-           c.indexOf('阶段标记') >= 0 || c.indexOf('判定逻辑') >= 0 ||
-           c.indexOf('联动变更') >= 0 || c.indexOf('只读字段') >= 0;
+           c.indexOf('动态注入') >= 0 || c.indexOf('injectprompts') >= 0 ||
+           c.indexOf('派生字段') >= 0 || c.indexOf('衍生字段') >= 0 ||
+           c.indexOf('联动规则') >= 0 || c.indexOf('联动变更') >= 0 ||
+           c.indexOf('阈值触发') >= 0 || c.indexOf('状态机') >= 0 ||
+           c.indexOf('只读字段') >= 0;
+  }
+
+  // MVU 体系条目 = 核心 MVU 标记 + 附加条目（MVU Tab 用这个判断）
+  function isMvuSystemEntry(comment) {
+    return isMVUEntry(comment) || isMvuExtraEntry(comment);
   }
 
   // 判断是否为MVU核心条目（五大核心：[initvar]/变量列表/变量更新规则/变量输出格式/变量输出格式强调）
@@ -3590,6 +3694,20 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     options = options || {};
     var modified = false;
     var changeLog = { added: 0, updated: 0, deleted: 0, fieldUpdates: 0 };
+
+    // ===== 🩹 自愈已有条目的激活策略（修复历史数据里"常驻条目被写成非常驻/参数缺失"）=====
+    try {
+      if (cd.character_book && Array.isArray(cd.character_book.entries)) {
+        var _healedM = 0;
+        cd.character_book.entries.forEach(function(_e) {
+          if (!_e || typeof _e !== 'object') return;
+          var _snap = JSON.stringify([_e.constant, _e.selective, _e.insertion_order, _e.extensions]);
+          try { healEntryStrategy(_e); } catch(_heM) {}
+          if (JSON.stringify([_e.constant, _e.selective, _e.insertion_order, _e.extensions]) !== _snap) _healedM++;
+        });
+        if (_healedM > 0) { modified = true; changeLog._healed = _healedM; }
+      }
+    } catch(_healMErr) {}
 
     // ======================================================================
     // ========== Tab 隔离：mergePartial 入口处的双向硬拦截 ==========
@@ -5936,8 +6054,11 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     });
     // position配置合理性（新增）：constant条目position应为0-1，position=6需depth+role，position=7需outlet_name
     var posErrors = entries.filter(function(e) {
-      var pos = e.position;
       var ext = e.extensions || {};
+      // ⚠️修复：position 真正存在 extensions.position（0-4），顶层 e.position 只在导出时是 'before_char'/'after_char'
+      var pos = (ext.position !== undefined && ext.position !== null) ? ext.position
+              : (typeof e.position === 'number' ? e.position
+              : (e.position === 'before_char' ? 0 : (e.position === 'after_char' ? 1 : undefined)));
       // constant=true时position应在0-1范围
       if (e.constant === true && pos !== undefined && pos !== null && pos > 1) return true;
       // position=6时需要有depth和role
@@ -6144,7 +6265,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 
     // === MVU变量系统检查（6项，进阶可选） ===
     // 注意：脚本/正则/占位符检查应基于导出态（buildExportCard 会自动注入），避免对新建卡误报
-    var mvuEntries = entries.filter(function(e) { return isMVUEntry(e.comment || ''); });
+    var mvuEntries = entries.filter(function(e) { return isMvuSystemEntry(e.comment || ''); });
     var hasInitVar = mvuEntries.some(function(e) { return (e.comment || '').indexOf('[InitVar]') >= 0; });
     var hasVarList = mvuEntries.some(function(e) { return (e.comment || '').indexOf('变量列表') >= 0; });
     var hasVarRule = mvuEntries.some(function(e) { return (e.comment || '').indexOf('变量更新规则') >= 0; });
@@ -7496,8 +7617,13 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
   function _convertToWorldbookEntry(e, i, sourceTag) {
     var comment = e.comment || e.name || e.title || ('条目' + (i + 1));
     var ext = e.extensions || {};
-    // position：优先 extensions.position(数字)，其次顶层 position，默认 4(at_depth)
-    var posRaw = (ext.position !== undefined ? ext.position : (e.position !== undefined ? e.position : 4));
+    // 模板兜底：条目自身没写常驻/触发/位置/深度/权重时，按 comment 命中的 ENTRY_TEMPLATES 补齐，
+    // 避免任何调用方（含直接写入路径）把参数丢成默认值。
+    var _tmplC = (typeof getEntryTemplate === 'function') ? getEntryTemplate(comment) : null;
+    // position：优先 extensions.position(数字)，其次顶层 position，再模板，默认 4(at_depth)
+    var posRaw = (ext.position !== undefined ? ext.position
+                : (e.position !== undefined ? e.position
+                : (_tmplC && _tmplC.position !== undefined ? _tmplC.position : 4)));
     var posNum = (typeof posRaw === 'string')
       ? (posRaw === 'before_char' || posRaw === '0' ? 0 : (posRaw === 'after_char' || posRaw === '1' ? 1 : 4))
       : posRaw;
@@ -7509,38 +7635,44 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       : 'at_depth';
     var roleNum = (ext.role !== undefined ? ext.role : 0);
     var posRole = (roleNum === 1) ? 'user' : (roleNum === 2 ? 'assistant' : 'system');
-    var posDepth = (ext.depth !== undefined ? ext.depth : 4);
-    var order = (e.insertion_order !== undefined ? e.insertion_order : (ext.order || 100));
+    var posDepth = (ext.depth !== undefined ? ext.depth : (_tmplC && _tmplC.depth !== undefined ? _tmplC.depth : 4));
+    var order = (e.insertion_order !== undefined ? e.insertion_order
+                : (ext.order !== undefined && ext.order !== null && ext.order !== '' ? ext.order
+                : (_tmplC && _tmplC.order !== undefined ? _tmplC.order : 100)));
     // 激活策略：constant=true→蓝灯; 否则 selective=true→绿灯; 否则默认 constant
-    var isConst = (e.constant !== undefined ? e.constant : false);
-    var isSel = (e.selective !== undefined ? e.selective : true);
+    var isConst = (e.constant !== undefined ? e.constant : (_tmplC ? _tmplC.constant : false));
+    var isSel = (e.selective !== undefined ? e.selective : (_tmplC ? _tmplC.selective : true));
     var stratType = isConst ? 'constant' : (isSel ? 'selective' : 'constant');
     var keys = Array.isArray(e.keys) ? e.keys.filter(function(k) { return typeof k === 'string' && k; }) : [];
     var secKeys = Array.isArray(e.secondary_keys) ? e.secondary_keys : [];
-    var selLogic = (ext.selectiveLogic === 1 ? 'and_all' : (ext.selectiveLogic === 2 ? 'not_all' : (ext.selectiveLogic === 3 ? 'not_any' : 'and_any')));
-    var useProb = (ext.useProbability !== undefined ? ext.useProbability : (ext.use_probability !== undefined ? ext.use_probability : true));
-    var probability = useProb ? (ext.probability !== undefined ? ext.probability : 100) : 100;
+    // ST selectiveLogic 常量：0=AND_ANY, 1=NOT_ALL, 2=NOT_ANY, 3=AND_ALL
+    // ⚠️【修复】旧映射把 1/2/3 整体错位（1→and_all、2→not_all、3→not_any），
+    //   导致 AI 写的 secondary_keys 逻辑在酒馆里完全变成另一种模式。
+    var selLogic = (ext.selectiveLogic === 1 ? 'not_all' : (ext.selectiveLogic === 2 ? 'not_any' : (ext.selectiveLogic === 3 ? 'and_all' : 'and_any')));
+    var useProb = (ext.useProbability !== undefined ? ext.useProbability : (ext.use_probability !== undefined ? ext.use_probability : (_tmplC ? _tmplC.useProbability : true)));
+    var probability = useProb ? (ext.probability !== undefined ? ext.probability : (_tmplC && _tmplC.probability !== undefined ? _tmplC.probability : 100)) : 100;
     return {
       name: comment,
       content: e.content || '',
-      enabled: (e.enabled !== undefined ? e.enabled : true),
+      enabled: (e.enabled !== undefined ? e.enabled : (_tmplC && _tmplC.enabled !== undefined ? _tmplC.enabled : true)),
       strategy: {
         type: stratType,
         keys: keys,
         keys_secondary: { logic: selLogic, keys: secKeys },
-        scan_depth: (ext.scan_depth !== undefined && ext.scan_depth !== null) ? ext.scan_depth : 'same_as_global'
+        scan_depth: (ext.scan_depth !== undefined && ext.scan_depth !== null) ? ext.scan_depth
+                   : (_tmplC && _tmplC.scan_depth !== undefined && _tmplC.scan_depth !== null ? _tmplC.scan_depth : 'same_as_global')
       },
       position: { type: posType, role: posRole, depth: posDepth, order: order },
       probability: probability,
       recursion: {
-        prevent_incoming: !!(ext.prevent_recursion),
-        prevent_outgoing: !!(ext.exclude_recursion),
-        delay_until: (ext.delay_until_recursion || null)
+        prevent_incoming: !!(ext.prevent_recursion !== undefined ? ext.prevent_recursion : (_tmplC && _tmplC.prevent_recursion)),
+        prevent_outgoing: !!(ext.exclude_recursion !== undefined ? ext.exclude_recursion : (_tmplC && _tmplC.exclude_recursion)),
+        delay_until: (ext.delay_until_recursion || (_tmplC && _tmplC.delay_until_recursion) || null)
       },
       effect: {
-        sticky: (ext.sticky || null),
-        cooldown: (ext.cooldown || null),
-        delay: (ext.delay || null)
+        sticky: (ext.sticky || (_tmplC && _tmplC.sticky) || null),
+        cooldown: (ext.cooldown || (_tmplC && _tmplC.cooldown) || null),
+        delay: (ext.delay || (_tmplC && _tmplC.delay) || null)
       },
       extra: { source: sourceTag }
     };
@@ -8887,18 +9019,28 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (node.type === 'entry') {
           var e = ((cardData.character_book || {}).entries || [])[node.index];
           if (!e) return null;
+          // ⚠️修复：条目参数真实存放位置是 e.extensions.*（position/depth/probability…），
+          //   顶层 e.position 只在导出时是 'before_char'/'after_char' 字符串。
+          //   旧代码只读顶层字段 → 工作台里的"位置/深度/优先级/分组"永远是空的默认值，
+          //   用户根本看不出条目到底是常驻还是触发、注入在哪一层。
+          var ext = (e.extensions && typeof e.extensions === 'object') ? e.extensions : {};
+          var tmpl = getEntryTemplate(e.comment || '');
+          var posNum = (ext.position !== undefined && ext.position !== null) ? ext.position
+                     : (typeof e.position === 'number' ? e.position
+                     : (e.position === 'before_char' ? 0 : (e.position === 'after_char' ? 1 : (tmpl && tmpl.position !== undefined ? tmpl.position : 4))));
+          var posName = (posNum === 0) ? 'before_char' : (posNum === 1 ? 'after_char' : (posNum === 2 ? 'before_an' : (posNum === 3 ? 'after_an' : 'at_end')));
           return {
             comment: e.comment || '',
             enabled: e.enabled !== false,
             constant: !!e.constant,
             selective: !!e.selective,
-            vectorized: !!e.vectorized,
-            position: e.position,
+            vectorized: !!(ext.vectorized || e.vectorized),
+            position: posName,
             keys: (e.keys || []).join(', '),
-            depth: e.depth,
-            order: e.order,
-            group: e.group || '',
-            groupWeight: e.groupWeight
+            depth: (ext.depth !== undefined && ext.depth !== null) ? ext.depth : (typeof e.depth === 'number' ? e.depth : (tmpl && tmpl.depth !== undefined ? tmpl.depth : 4)),
+            order: (e.insertion_order !== undefined) ? e.insertion_order : ((ext.order !== undefined && ext.order !== null) ? ext.order : (tmpl && tmpl.order !== undefined ? tmpl.order : 100)),
+            group: ext.group || e.group || (tmpl ? (tmpl.group || '') : '') || '',
+            groupWeight: (ext.group_weight !== undefined) ? ext.group_weight : (e.groupWeight !== undefined ? e.groupWeight : 100)
           };
         }
         return null;
@@ -8907,16 +9049,26 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (!node || node.type !== 'entry') return;
         var e = ((cardData.character_book || {}).entries || [])[node.index];
         if (!e) return;
+        if (!e.extensions || typeof e.extensions !== 'object') e.extensions = {};
+        var ext = e.extensions;
         if (meta.enabled != null) e.enabled = meta.enabled;
-        if (meta.constant != null) e.constant = meta.constant;
-        if (meta.selective != null) e.selective = meta.selective;
-        if (meta.vectorized != null) e.vectorized = meta.vectorized;
-        if (meta.position != null) e.position = meta.position;
-        if (meta.keys != null) e.keys = meta.keys.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
-        if (meta.depth != null) e.depth = meta.depth;
-        if (meta.order != null) e.order = meta.order;
-        if (meta.group != null) e.group = meta.group;
-        if (meta.groupWeight != null) e.groupWeight = meta.groupWeight;
+        // 常驻/关键词匹配互斥：勾了常驻就自动关掉绿灯，勾了绿灯就自动关掉常驻
+        if (meta.constant != null) { e.constant = !!meta.constant; if (meta.constant) e.selective = false; }
+        if (meta.selective != null) { e.selective = !!meta.selective; if (meta.selective) e.constant = false; }
+        if (meta.vectorized != null) ext.vectorized = meta.vectorized;
+        if (meta.position != null) {
+          var posMap = { before_char: 0, after_char: 1, before_an: 2, after_an: 3, at_end: 4, at_depth: 4 };
+          var pv = (typeof meta.position === 'number') ? meta.position : posMap[meta.position];
+          ext.position = (pv === undefined || pv === null || isNaN(pv)) ? 4 : pv;
+          delete e.position;   // 清掉历史误写的顶层 position，避免盖住 extensions.position
+        }
+        if (meta.keys != null) e.keys = String(meta.keys).split(/[,，、]/).map(function(s) { return s.trim(); }).filter(Boolean);
+        if (meta.depth != null) { ext.depth = meta.depth; delete e.depth; }
+        if (meta.order != null) { e.insertion_order = meta.order; ext.order = meta.order; delete e.order; }
+        if (meta.group != null) { ext.group = meta.group; delete e.group; }
+        if (meta.groupWeight != null) { ext.group_weight = meta.groupWeight; delete e.groupWeight; }
+        // 兜底：非常驻又没开绿灯的条目在酒馆里永远不会激活，自动补成绿灯
+        if (!e.constant && !e.selective) e.selective = true;
       }
       function _wsIsHtml(node, val) {
         if (node && node.type === 'thscript') return true;
@@ -9045,7 +9197,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         entries.forEach(function(e, i) {
           var label = e.comment || ('条目' + (i+1));
           var node = { type: 'entry', key: 'character_book', index: i, label: label, path: 'entries[' + i + ']', rawComment: e.comment || '' };
-          if (isMVUEntry(e.comment || '')) { mvuNodes.push(node); return; }
+          if (isMvuSystemEntry(e.comment || '')) { mvuNodes.push(node); return; }
           var m = /^<([^>]+)>/.exec(e.comment || '');
           var bucketKey = m ? m[1] : '未分类';
           if (m) {
@@ -9151,7 +9303,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               '<option value="after_char"' + (meta.position === 'after_char' ? ' selected' : '') + '>角色定义之后(1)</option>' +
               '<option value="before_an"' + (meta.position === 'before_an' ? ' selected' : '') + '>示例消息之前(2)</option>' +
               '<option value="after_an"' + (meta.position === 'after_an' ? ' selected' : '') + '>示例消息之后(3)</option>' +
-              '<option value="at_end"' + (meta.position === 'at_end' ? ' selected' : '') + '>作者注底部(2)</option>' +
+              '<option value="at_end"' + (meta.position === 'at_end' ? ' selected' : '') + '>按深度注入/作者注(4)</option>' +
             '</select></label>' +
             '<label class="ws-prop">深度 <input type="number" class="ws-prop-depth" value="' + (meta.depth != null ? meta.depth : 4) + '" min="0" max="12" style="width:40px"></label>' +
             '<label class="ws-prop">优先级 <input type="number" class="ws-prop-order" value="' + (meta.order != null ? meta.order : 100) + '" min="0" max="1000" style="width:50px"></label>' +
@@ -9395,7 +9547,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       function buildWorkspaceArtifact() {
         var p = progress || 0;
         var entries = (cardData.character_book || {}).entries || [];
-        var wbCount = entries.filter(function(e) { return !isMVUEntry(e.comment || ''); }).length;
+        var wbCount = entries.filter(function(e) { return !isMvuSystemEntry(e.comment || ''); }).length;
         var mvuCount = entries.length - wbCount;
         var rxCount = ((cardData.extensions || {}).regex_scripts || []).length;
         var html = '<div class="ws-art-summary">' +
@@ -9418,7 +9570,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           recent.forEach(function(e) {
             var name = e.comment || '未命名';
             var content = (e.content || '').substring(0, 120);
-            var isMvu = isMVUEntry(e.comment || '');
+            var isMvu = isMvuSystemEntry(e.comment || '');
             html += '<div class="ws-art-card' + (isMvu ? ' mvu' : '') + '">' +
               '<div class="ws-ac-title">' + (isMvu ? svgIcon('sliders', 12) + ' ' : svgIcon('book', 12) + ' ') + escHtml(name) +
                 (e.enabled === false ? ' <span class="ws-ac-off">禁用</span>' : '') +
@@ -9762,6 +9914,10 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         }
 
         cardGenerated = !!(cardData.name && (cardData.description || (cardData.character_book.entries && cardData.character_book.entries.length > 0)));
+        // ===== 🩹 导入后自愈条目激活策略（常驻条目被写成非常驻/缺参数的历史卡）=====
+        try {
+          (cardData.character_book.entries || []).forEach(function(_e) { healEntryStrategy(_e); });
+        } catch(_healImpErr) {}
         progress = calcProgress();
         // ========== Tab 隔离：导入角色卡时重置两边聊天记录（回到全新起始状态） ==========
         chatSessions.card.messages = [];
@@ -10017,6 +10173,11 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             if (!cardData.extensions.tavern_helper) cardData.extensions.tavern_helper = { scripts: [], variables: {} };
             if (!cardData.extensions.tavern_helper.scripts) cardData.extensions.tavern_helper.scripts = [];
             if (!cardData.alternate_greetings) cardData.alternate_greetings = [];
+            // ===== 🩹 自愈条目激活策略：历史数据里常驻条目被误写成"非常驻+非选择性"（死条目），
+            //   以及缺失 position/depth/order 等参数，读取时统一修回模板设定，右侧预览立刻能看出真实状态 =====
+            try {
+              cardData.character_book.entries.forEach(function(_e) { healEntryStrategy(_e); });
+            } catch(_healLoadErr) {}
 
             // ========== Tab 隔离：优先加载 chatSessions 对象，其次从独立字段重建 ==========
             if (state.chatSessions && typeof state.chatSessions === 'object') {
@@ -10283,7 +10444,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         var hasFirst = cardData.first_mes && cardData.first_mes.length > 50;
         var hasEntries = cardData.character_book && cardData.character_book.entries && cardData.character_book.entries.length > 0;
         var hasMVU = hasEntries && cardData.character_book.entries.some(function(e) {
-          return isMVUEntry(e.comment || '');
+          return isMvuSystemEntry(e.comment || '');
         });
 
         // ========== 精简版：仅留「阶段主操作」+「生成」+ 2 mini（写入/清空）==========
@@ -11838,6 +11999,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       function cleanAIReply(text) {
         if (!text) return text;
         var t = text;
+        // ⚠️修复：统一换行。酒馆接口/部分模型会返回 \r\n，而 ::: 操作块解析、各种行首锚定正则都按 \n 写，
+        //   不统一的话整段回复可能一条 ::: 块都解析不出来（表现为"AI说加了3条，右侧一条没加"）。
+        t = t.replace(/\r\n?/g, '\n');
         t = t.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
         t = t.replace(/<!--\s*End of The ECoT\s*-->/gi, '');
         t = t.replace(/^#\s*果农人格加载[^\n]*\n/gim, '');
@@ -11904,81 +12068,115 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         return r.toLowerCase();
       }
 
-      // 解析 ::: 操作块，返回操作数组
+      // ===== 🆕 ::: 操作块协议解析器（行扫描版 · 重写）=====
+      // 旧版用「一条大正则 + 前瞻匹配闭合行」解析，有三个脆弱点，全都是"AI说改了3条、实际只生效2条"的根因：
+      //   ① AI 最后一个块忘了写闭合 :::  → 该块被整块丢弃（3条只进2条）；
+      //   ② 回复里带 \r\n（酒馆接口/模型常见）→ 整条正则匹配失败，一条都解析不出来；
+      //   ③ 闭合行后面跟了说明文字（例如 "::: （已新增）"）→ 前瞻要求行尾只有空白，匹配失败，
+      //      块体会一直吞到下一个块的闭合处，造成块之间互相吞并、条数变少。
+      // 新版改成逐行扫描：
+      //   · 换行统一成 \n（兼容 \r\n / \r）；
+      //   · 块开始 = 行首 ::: + 动作关键字（upsert/update/delete/set/rename，冒号后有无空格都行）；
+      //   · 块结束 = 行首 :::（允许行尾跟说明文字）；文本结束仍未闭合的块也照常收尾，绝不丢内容。
+      var OP_ACTION_RE = /^[ \t]*:::[ \t]*(upsert|update|delete|set|rename)(?=[ \t]|$)[ \t]*(.*)$/i;
+      var OP_CLOSE_RE = /^[ \t]*:::/;
+
+      function _normalizeOpText(t) {
+        return String(t == null ? '' : t).replace(/\r\n?/g, '\n');
+      }
+
       function parseOpBlocks(rawText) {
         if (!rawText) return [];
+        var text = _normalizeOpText(rawText);
+        var lines = text.split('\n');
         var ops = [];
-        // 匹配 ::: action key ... 格式（key 到换行/行尾为止，content 到下一个 ::: 为止）
-        // 用单个 \n 分隔 key 和 content，避免 [\r\n]+ 贪婪吃掉多个换行导致 content 起点错误
-        // 前瞻允许中间有空行（\n\s*:::），解决 delete 后紧跟空行再接下一个操作的问题
-        // ⚠️修复：用 (?:^|\n) 锚定行首，避免AI散文里的内联引用（如"使用`::: upsert script:xxx`协议"）
-        //   被误匹配为操作块，从而生成垃圾脚本/条目并吞掉真正的:::块。
-        // ⚠️【修复AI删除条目不生效 #1】强制要求每个 :::action key ... 必须用一个单独行的 ::: 结束（闭合）。
-        //   原来前瞻写法 (?=\n[ \t]*:::|$) 允许 delete 后跟"没有闭合的:::"，AI在delete后直接写自然语言或另一个:::块开头，
-        //   会导致块体错误吞掉后续大段文本，最终 parseOpBlocks 解析出的 delete.key 里混有"删除理由/下一动作"等垃圾内容，
-        //   applyOps / mergePartial 都匹配不到条目。这是用户反馈"AI明明写了删除但预览还堆叠"的主要根因。
-        //   新规则：块结束 = 【必须】行首（允许前导空格/制表）三冒号 + 行尾空白。delete/rename/set 这种无正文的动作，
-        //   也必须以空行 + 闭合:::结尾（AI 输出格式模板里也已经明确说明写法）。
-        var re = /(?:^|\n)[ \t]*:::\s*(upsert|update|delete|set|rename)\s+([^\n\r]+?)\n([\s\S]*?)(?=\n[ \t]*:::[ \t]*(?:$|\n))/gi;
-        var m;
-        while ((m = re.exec(rawText)) !== null) {
-          var action = m[1].toLowerCase();
-          var key = m[2].trim();
-          // 从块体里剥离后面会被前瞻一并捕获的闭合:::行（前瞻只是锚定，内容里仍可能含尾空格/换行）
-          var rawBody = (m[3] || '').replace(/\n[ \t]*:::[ \t]*$/, '').replace(/\n[ \t]*:::[ \t]*\n$/, '\n').trim();
-          var content = rawBody;
-          // ===== ✅新增：解析 upsert/update 块体开头的元信息头（keys/secondary_keys/selectiveLogic/constant/depth/cooldown等）=====
-          //   格式：块体第1行开始，连续出现 `键=值`（单行）行，直到遇到第1个空行或遇到不以"键名="开头的行为止。
-          //   之后的部分（空行之后 / 非键=值行开始之后）才是真正的 content 正文。
-          //   支持的键：keys, secondary_keys, selectiveLogic, constant, depth, cooldown, sticky, delay, vectorized,
-          //            prevent_recursion, exclude_recursion, delay_until_recursion, use_regex, probability, group, order
-          var metaFields = ['keys','secondary_keys','selectiveLogic','constant','depth','cooldown','sticky','delay',
-                            'vectorized','prevent_recursion','exclude_recursion','delay_until_recursion','use_regex',
-                            'probability','group','order','insertion_order','position','useProbability','scan_depth',
-                            'match_whole_words','enabled','group_weight'];
-          var _stripMeta = function(bodyStr) {
-            var lines = bodyStr.split(/\r?\n/);
-            var meta = {};
-            var splitIdx = -1;  // 正文从第几行开始
-            for (var li = 0; li < lines.length; li++) {
-              var line = lines[li];
-              var tline = line.trim();
-              if (tline === '') { splitIdx = li + 1; break; }     // 空行 → 元信息结束
-              var eq = tline.indexOf('=');
-              if (eq < 2) { splitIdx = li; break; }               // 不以"键="开头 → 元信息结束
-              var k = tline.substring(0, eq).trim();
-              var v = tline.substring(eq + 1).trim();
-              var matchedKey = null;
-              for (var mi = 0; mi < metaFields.length; mi++) {
-                if (metaFields[mi].toLowerCase() === k.toLowerCase()) { matchedKey = metaFields[mi]; break; }
-              }
-              if (!matchedKey) { splitIdx = li; break; }          // 不是已知元信息键 → 元信息结束
-              // 值解析
-              if (matchedKey === 'keys' || matchedKey === 'secondary_keys') {
-                meta[matchedKey] = v.split(/[,，]/).map(function(s){return s.trim();}).filter(function(s){return s.length>0;});
-              } else if (matchedKey === 'constant' || matchedKey === 'vectorized' || matchedKey === 'prevent_recursion'
-                      || matchedKey === 'exclude_recursion' || matchedKey === 'use_regex' || matchedKey === 'useProbability'
-                      || matchedKey === 'match_whole_words' || matchedKey === 'enabled') {
-                meta[matchedKey] = /^(true|1|yes|是)$/i.test(v);
-              } else if (matchedKey === 'group') {
-                meta[matchedKey] = v;
-              } else {
-                var n = Number(v);
-                meta[matchedKey] = (!isNaN(n) && String(n) === v) ? n : v;
+        var cur = null;
+
+        // 支持的元信息键（写在块体开头的 `键=值` / `键：值` 行）
+        var metaFields = ['keys','secondary_keys','selectiveLogic','constant','depth','cooldown','sticky','delay',
+                          'vectorized','prevent_recursion','exclude_recursion','delay_until_recursion','use_regex',
+                          'probability','group','order','insertion_order','position','useProbability','scan_depth',
+                          'match_whole_words','enabled','group_weight'];
+
+        var _stripMeta = function(bodyStr) {
+          var blines = String(bodyStr == null ? '' : bodyStr).split('\n');
+          var meta = {};
+          var bodyStart = 0;        // 正文从第几行开始
+          var metaEnded = false;    // 是否已经遇到过"非元信息行"或空行
+          for (var li = 0; li < blines.length; li++) {
+            var tline = blines[li].trim();
+            if (tline === '') { bodyStart = li + 1; metaEnded = true; break; }   // 空行 → 元信息结束
+            // 键名必须是 ASCII 标识符，分隔符支持 = : ：（全角冒号/全角等号），
+            // 这样正文里的「姓名：白娅」「年龄：18」不会被误判成元信息。
+            var mm = tline.match(/^([A-Za-z_][A-Za-z0-9_]*)[ \t]*[=:：＝][ \t]*(.*)$/);
+            if (!mm) { bodyStart = li; metaEnded = true; break; }
+            var k = mm[1];
+            var v = mm[2].trim().replace(/^["'“”‘’]+|["'“”‘’]+$/g, '').trim();
+            var matchedKey = null;
+            for (var mi = 0; mi < metaFields.length; mi++) {
+              if (metaFields[mi].toLowerCase() === k.toLowerCase()) { matchedKey = metaFields[mi]; break; }
+            }
+            if (!matchedKey) { bodyStart = li; metaEnded = true; break; }        // 不是已知元信息键 → 元信息结束
+            // ---- 值解析 ----
+            if (matchedKey === 'keys' || matchedKey === 'secondary_keys') {
+              meta[matchedKey] = v.replace(/^\[|\]$/g, '').split(/[,，、]/).map(function(s){return s.trim();}).filter(function(s){return s.length>0;});
+            } else if (matchedKey === 'constant' || matchedKey === 'vectorized' || matchedKey === 'prevent_recursion'
+                    || matchedKey === 'exclude_recursion' || matchedKey === 'use_regex' || matchedKey === 'useProbability'
+                    || matchedKey === 'match_whole_words' || matchedKey === 'enabled') {
+              meta[matchedKey] = /^(true|1|yes|是|开|启用|on)$/i.test(v);
+            } else if (matchedKey === 'group') {
+              meta[matchedKey] = v;
+            } else if (matchedKey === 'position') {
+              var pv = String(v).toLowerCase();
+              if (pv === 'before_char' || pv === 'before_character_definition') meta.position = 0;
+              else if (pv === 'after_char' || pv === 'after_character_definition') meta.position = 1;
+              else if (pv === 'before_an' || pv === 'before_example_messages') meta.position = 2;
+              else if (pv === 'after_an' || pv === 'after_example_messages') meta.position = 3;
+              else if (pv === 'at_depth') meta.position = 4;
+              else { var pn = Number(pv); meta.position = isNaN(pn) ? v : pn; }
+            } else if (matchedKey === 'probability') {
+              var prob = Number(String(v).replace(/%/g, ''));
+              meta.probability = isNaN(prob) ? v : prob;
+            } else {
+              var n = Number(v);
+              meta[matchedKey] = (!isNaN(n) && String(n) === v) ? n : v;
+            }
+          }
+          // 全部行都是元信息（没有正文）→ 正文为空，绝不能把 "keys=…" 这类配置行当成条目内容
+          if (!metaEnded) bodyStart = blines.length;
+          var bodyLines = blines.slice(bodyStart);
+          return { meta: meta, content: bodyLines.join('\n').trim() };
+        };
+
+        var flush = function() {
+          if (!cur) return;
+          var action = cur.action;
+          var key = String(cur.keyLine || '').trim();
+          var rawBody = cur.body.join('\n').replace(/^\n+/, '').replace(/[ \t\u3000]+$/, '');
+          cur = null;
+
+          // 单行写法兜底：::: upsert <标签>名字 正文……（正文跟在同一行、块体为空）
+          if ((action === 'upsert' || action === 'update') && rawBody === '' && key) {
+            var gt = key.indexOf('>');
+            if (key.charAt(0) === '<' && gt > 0) {
+              var rest = key.slice(gt + 1);
+              var sp = rest.search(/[ \t\u3000]/);
+              if (sp > 0) {
+                var tail = rest.slice(sp).trim();
+                if (tail.length >= 8) {          // 尾巴够长才认为是正文，避免吃掉 "· 家庭背景" 这类后缀
+                  rawBody = tail;
+                  key = key.slice(0, gt + 1) + rest.slice(0, sp).trim();
+                }
               }
             }
-            var bodyLines = (splitIdx >= 0) ? lines.slice(splitIdx) : lines;
-            return { meta: meta, content: bodyLines.join('\n').trim() };
-          };
+          }
+
           if (action === 'upsert' || action === 'update') {
             var r = _stripMeta(rawBody);
-            for (var mk in r.meta) { if (r.meta.hasOwnProperty(mk)) ops._metaFields = ops._metaFields || {}; }  // no-op 兼容
-            // 把解析出的元信息直接挂到 op 上（applyOps 里会用），content 用剥离元信息后的正文
-            content = r.content;
-            var opRec = { action: action, key: key, content: content };
-            for (var _mk in r.meta) { if (r.meta.hasOwnProperty(_mk)) opRec[_mk] = r.meta[_mk]; }
+            var opRec = { action: action, key: key, content: r.content };
+            for (var mk in r.meta) { if (r.meta.hasOwnProperty(mk)) opRec[mk] = r.meta[mk]; }
             ops.push(opRec);
-            continue;
+            return;
           }
           // rename 格式：::: rename oldKey → newKey
           if (action === 'rename') {
@@ -11992,19 +12190,34 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                 ops.push({ action: 'rename', oldKey: parts[0], newKey: parts.slice(1).join(' '), content: '' });
               }
             }
-          } else {
-            ops.push({ action: action, key: key, content: content });
+            return;
+          }
+          ops.push({ action: action, key: key, content: rawBody });
+        };
+
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          var mStart = line.match(OP_ACTION_RE);
+          if (mStart) {
+            flush();                                  // 上一个块（可能没闭合）先收尾
+            cur = { action: mStart[1].toLowerCase(), keyLine: mStart[2] || '', body: [] };
+            continue;
+          }
+          if (cur) {
+            if (OP_CLOSE_RE.test(line)) flush();       // 闭合行（允许行尾有说明文字）
+            else cur.body.push(line);
           }
         }
+        flush();                                       // 文本结束仍未闭合的块也收尾
         return ops;
       }
 
-      // 检测AI回复是否包含:::操作块（行首锚定，避免散文内联引用误判）——同时要求块必须存在闭合:::行，
-      // 否则 hasOpBlocks 会误判"我要输出:::协议"这种说明性文本也算有效块，导致旧JSON路径被跳过。
+      // 检测AI回复是否包含:::操作块（行首锚定，避免散文内联引用误判）
+      // ⚠️修复：不再要求"必须存在闭合行"。旧写法导致 AI 少写一个闭合 ::: 时整段回退到旧JSON路径，
+      //   结果 ::: 块里的内容全被当成普通聊天文本丢掉。
       function hasOpBlocks(rawText) {
         if (!rawText) return false;
-        // 至少要有 开始行 + 闭合行 两个:::。写法：:::action key...\n...\n:::（闭合一行）
-        return /(?:^|\n)[ \t]*:::\s*(?:upsert|update|delete|set|rename)\s+[^\n\r]+\n[\s\S]*?\n[ \t]*:::[ \t]*(?:$|\n)/i.test(rawText);
+        return /^[ \t]*:::[ \t]*(?:upsert|update|delete|set|rename)(?=[ \t]|$)/im.test(_normalizeOpText(rawText));
       }
 
       // 执行操作数组，返回 { modified, changeLog }
@@ -12024,6 +12237,24 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         // 合法的顶层字段（set操作用）
         var validFields = ['name','description','first_mes','system_prompt','personality','scenario','creator_notes','alternate_greetings','creator','character_version','depth_prompt'];
 
+        // ⚠️【修复】固定MVU正则ID表原来在 upsert 分支里用 var 声明，delete 分支又去读它，
+        //   单独执行「::: delete regex:xxx」时它是 undefined → 抛 TypeError → 整个 applyOps 中断，
+        //   该回复里后面的所有操作（包括新增条目）全部丢失。现提升到函数顶部统一声明。
+        var _fixedRxIds = { 'd668c8a6-fa6a-444d-a5d6-8f68b73a3c36':1, '5bb4b588-23ca-4564-8df5-882104eff764':1, '6fb572ae-a9ea-436d-9779-ad100f1ff7f5':1, 'bf1b7441-5cf1-426d-bd6c-911332be9923':1, 'mvu-status-hide':1 };
+
+        // ===== 🩹 先自愈一遍已有条目：修掉历史遗留的"常驻条目被写成非常驻"和缺失的位置/深度参数 =====
+        try {
+          if (cd.character_book && Array.isArray(cd.character_book.entries)) {
+            var _healed = 0;
+            cd.character_book.entries.forEach(function(_e) {
+              var _before = JSON.stringify([_e && _e.constant, _e && _e.selective, _e && _e.insertion_order, _e && _e.extensions]);
+              try { healEntryStrategy(_e); } catch(_he) {}
+              if (JSON.stringify([_e && _e.constant, _e && _e.selective, _e && _e.insertion_order, _e && _e.extensions]) !== _before) _healed++;
+            });
+            if (_healed > 0) { modified = true; changeLog._healed = _healed; }
+          }
+        } catch(_healErr) {}
+
         // MVU条目关键词（用于Tab隔离：角色卡Tab下拦截MVU条目写入）
         function _isMvuEntryKey(comment) {
           var c = (comment || '').toLowerCase();
@@ -12042,6 +12273,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         }
 
         ops.forEach(function(op) {
+        try {
           // ===== Tab隔离：角色卡Tab下拦截MVU条目写入 =====
           if (currentTab === 'card' && (op.action === 'upsert' || op.action === 'update' || op.action === 'delete')) {
             if (_isMvuEntryKey(op.key)) {
@@ -12092,8 +12324,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             if (op.key && /^regex:/i.test(op.key)) {
               var rxName = op.key.replace(/^regex:\s*/i, '').trim();
               var rxList = cd.extensions.regex_scripts;
-              // 固定MVU正则拦截（正则1-5由写卡器自动注入，AI无权修改）
-              var _fixedRxIds = { 'd668c8a6-fa6a-444d-a5d6-8f68b73a3c36':1, '5bb4b588-23ca-4564-8df5-882104eff764':1, '6fb572ae-a9ea-436d-9779-ad100f1ff7f5':1, 'bf1b7441-5cf1-426d-bd6c-911332be9923':1, 'mvu-status-hide':1 };
+              // 固定MVU正则拦截（正则1-5由写卡器自动注入，AI无权修改）；_fixedRxIds 已在函数顶部声明
               var _isFixedRx = _fixedRxIds[rxName.toLowerCase()] || /^(仅格式思维链|只发送最新2楼的变量更新|\[美化\]变量完成|\[美化\]变量更新中|\[不发送\]隐藏状态栏标记)$/i.test(rxName);
               if (_isFixedRx) {
                 console.warn('[opblock] 拦截固定MVU正则修改:', rxName);
@@ -12228,8 +12459,10 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               var oldEntry = cd.character_book.entries[foundIdx];
               var mergedEntry = Object.assign({}, oldEntry, basePatch);
               if (extPatch) mergedEntry.extensions = Object.assign({}, (oldEntry && oldEntry.extensions) || {}, extPatch);
-              // ===== ✅新增：keys 为空时，按<标签>分类+实体名自动派生（蓝灯不派生）=====
+              // ===== 🩹 补齐模板参数 + 自愈常驻策略（AI 没写的参数不再丢）=====
+              try { healEntryStrategy(mergedEntry); } catch(_he1) {}
               var _tmplHere = getEntryTemplate(mergedEntry.comment || '');
+              // ===== ✅新增：keys 为空时，按<标签>分类+实体名自动派生（蓝灯不派生）=====
               if ((!mergedEntry.keys || mergedEntry.keys.length === 0) && !((_tmplHere && _tmplHere.constant) || mergedEntry.constant)) {
                 try { mergedEntry.keys = _deriveEntryKeys(mergedEntry.comment, _tmplHere, mergedEntry.content); } catch(derr){}
               }
@@ -12242,11 +12475,17 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               if (op.action === 'update') {
                 console.warn('[opblock] update 找不到条目:', op.key);
               } else {
+                // ⚠️【修复】旧代码在这里硬写了 constant:false / position:0：
+                //   ① constant 被写成 false（非 undefined）→ 下面"模板兜底"永远兜不上，
+                //      <基础公理>/<核心铁则>/变量列表 等常驻条目全变成了非常驻；
+                //   ② 顶层 position:0 又盖掉了模板的 extensions.position，
+                //      所有新条目的注入位置都变成"角色定义之前"；
+                //   ③ 模板里的 depth/order/scan_depth/cooldown/sticky/probability/selectiveLogic 等
+                //      压根没写进 extensions → 写进酒馆后权重分层全部丢失。
+                //   现在改为：先放 AI 明确给出的值，其余一律用 ENTRY_TEMPLATES 的完整参数补齐。
                 var newEntry = Object.assign({
                   comment: cleanComment,
                   content: op.content || '',
-                  constant: false,
-                  position: 0,
                   keys: [],
                   secondary_keys: [],
                   extensions: {}
@@ -12254,19 +12493,39 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                 if (extPatch) newEntry.extensions = Object.assign({}, newEntry.extensions || {}, extPatch);
                 var _tmplNew = getEntryTemplate(newEntry.comment || '');
                 if (_tmplNew) {
-                  // MVU 系统条目强制使用模板的 selective/constant 值
+                  // MVU 系统条目强制使用模板的 selective/constant 值（AI 常误写 selective:true）
                   var _isNewMvuSys = (String(newEntry.comment || '').toLowerCase().indexOf('变量输出格式') >= 0 ||
                                      String(newEntry.comment || '').toLowerCase().indexOf('变量更新规则') >= 0 ||
                                      String(newEntry.comment || '').toLowerCase().indexOf('[initvar]') >= 0 ||
                                      String(newEntry.comment || '').indexOf('初始变量') >= 0 ||
                                      String(newEntry.comment || '').indexOf('变量列表') >= 0);
-                  if (_isNewMvuSys) {
-                    newEntry.selective = _tmplNew.selective;
-                    newEntry.constant = _tmplNew.constant;
-                  } else {
-                    if (newEntry.selective === undefined) newEntry.selective = _tmplNew.selective;
-                    if (newEntry.constant === undefined) newEntry.constant = _tmplNew.constant;
+                  if (_isNewMvuSys || newEntry.constant === undefined) newEntry.constant = _tmplNew.constant;
+                  if (_isNewMvuSys || newEntry.selective === undefined) newEntry.selective = _tmplNew.selective;
+                  if (newEntry.insertion_order === undefined && _tmplNew.order !== undefined) newEntry.insertion_order = _tmplNew.order;
+                  if (newEntry.use_regex === undefined && _tmplNew.use_regex !== undefined) newEntry.use_regex = _tmplNew.use_regex;
+                  if (newEntry.enabled === undefined && _tmplNew.enabled !== undefined) newEntry.enabled = _tmplNew.enabled;
+                  var _tmplExtPairs = [
+                    ['position','position'], ['depth','depth'], ['probability','probability'],
+                    ['selectiveLogic','selectiveLogic'], ['prevent_recursion','prevent_recursion'],
+                    ['exclude_recursion','exclude_recursion'], ['delay_until_recursion','delay_until_recursion'],
+                    ['sticky','sticky'], ['cooldown','cooldown'], ['delay','delay'],
+                    ['match_whole_words','match_whole_words'], ['scan_depth','scan_depth'],
+                    ['group','group'], ['group_weight','group_weight'], ['useProbability','useProbability']
+                  ];
+                  for (var _tp = 0; _tp < _tmplExtPairs.length; _tp++) {
+                    var _dst = _tmplExtPairs[_tp][0], _src = _tmplExtPairs[_tp][1];
+                    if (newEntry.extensions[_dst] === undefined && _tmplNew[_src] !== undefined) newEntry.extensions[_dst] = _tmplNew[_src];
                   }
+                  if (newEntry.extensions.role === undefined) newEntry.extensions.role = 0;
+                } else {
+                  // 无模板的自定义条目：与 mergePartial 的默认值保持一致
+                  if (newEntry.constant === undefined) newEntry.constant = false;
+                  if (newEntry.selective === undefined) newEntry.selective = true;
+                  if (newEntry.insertion_order === undefined) newEntry.insertion_order = 100;
+                  var _defExt = { position: 4, depth: 4, role: 0, probability: 100, selectiveLogic: 0, prevent_recursion: false,
+                                 exclude_recursion: false, delay_until_recursion: 0, sticky: 0, cooldown: 0, delay: 0,
+                                 group: '', group_weight: 100, useProbability: true };
+                  for (var _dk in _defExt) { if (_defExt.hasOwnProperty(_dk) && newEntry.extensions[_dk] === undefined) newEntry.extensions[_dk] = _defExt[_dk]; }
                 }
                 // ===== ✅新增：新条目 keys 为空自动派生 =====
                 if ((!newEntry.keys || newEntry.keys.length === 0) && !(newEntry.constant || (_tmplNew && _tmplNew.constant))) {
@@ -12402,6 +12661,14 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               console.warn('[opblock] rename 找不到条目:', op.oldKey);
             }
           }
+        } catch(_opErr) {
+          // ⚠️【修复】单个操作出错不再中断整批操作。历史上 applyOps 里任何一处抛异常
+          //   （例如 delete regex 分支读取未声明的 _fixedRxIds）都会让这一轮剩下的所有操作全部丢失，
+          //   表现为"AI 说加了 3 条，实际只加了一两条"。现在逐条兜底，失败的操作记录下来并提示用户。
+          console.warn('[opblock] 操作执行失败（已跳过，不影响其他操作）:', op && op.action, op && op.key, _opErr && _opErr.message);
+          changeLog._opErrors = changeLog._opErrors || [];
+          changeLog._opErrors.push(((op && op.action) || '?') + ' ' + ((op && op.key) || '') + ' → ' + (_opErr && _opErr.message));
+        }
         });
 
         return { modified: modified, changeLog: changeLog };
@@ -12958,9 +13225,11 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           // ========== 🆕 ::: 操作块协议优先检测 ==========
           // 如果AI回复包含:::操作块，走新协议路径（更简洁、零语法错误）
           // 否则回退到旧JSON路径（兼容）
-          if (hasOpBlocks(aiResponse)) {
-            var ops = parseOpBlocks(aiResponse);
-            if (ops.length > 0) {
+          // ⚠️修复：hasOpBlocks 现在不再要求闭合行（AI少写一个 ::: 时也要能解析），
+          //   因此这里改成"先解析、解析出操作才走新协议"，避免只写了 ::: 却解析不出操作时把整段回复吞掉。
+          var _opsParsed = hasOpBlocks(aiResponse) ? parseOpBlocks(aiResponse) : [];
+          if (_opsParsed.length > 0) {
+            var ops = _opsParsed;
               var opResult = applyOps(ops, cardData);
               if (opResult.modified) {
                 if (cardData.name && (cardData.description || (cardData.character_book && cardData.character_book.entries && cardData.character_book.entries.length > 0))) {
@@ -13001,7 +13270,6 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               } else if (ops.length > 0) {
                 showToast('⚠️ AI返回了操作指令，但未匹配到任何条目。请检查条目名称是否正确', 'warning', 6000);
               }
-            }
             // 跳过旧JSON路径
             var parsed = null;
           } else {
@@ -13499,7 +13767,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (existingModal) { existingModal.remove(); }
         var entries = (cardData.character_book || {}).entries || [];
         /* 前置检查：必须存在MVU条目 */
-        var hasMVU = entries.some(function(e) { return isMVUEntry(e.comment || ''); });
+        var hasMVU = entries.some(function(e) { return isMvuSystemEntry(e.comment || ''); });
         if (!hasMVU) {
           showToast('请先配置MVU变量系统（[InitVar]初始变量等条目）后再使用状态栏预览', 'warning');
           return;
@@ -14302,7 +14570,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (__tab === 'mvu') {
           // ========== MVU Tab 预览：状态栏总览(顶置) + 8步进度 + 变量结构脚本 + 变量条目 + 状态栏HTML源码 + 关联角色卡 ==========
           var allEntries = (cardData.character_book && cardData.character_book.entries) || [];
-          var mvuEntries = allEntries.filter(function(e) { return isMVUEntry(e.comment || ''); });
+          var mvuEntries = allEntries.filter(function(e) { return isMvuSystemEntry(e.comment || ''); });
           var rxScripts = normalizeRegexScripts(cardData.extensions && cardData.extensions.regex_scripts);
 
           // ① 状态栏总览（顶置突出，含8步进度条 + 操作按钮）
@@ -14431,13 +14699,23 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             var label = e.comment || ('条目' + (i+1));
             var eTok = countTokens(e.content || '');
             var constTag = e.constant ? '<span class="pv-tag ok">常驻</span>' : '<span class="pv-tag">触发</span>';
-            var posTag = '<span class="pv-tag">P' + (e.position == null ? '-' : e.position) + '</span>';
-            var depTag = (e.depth != null) ? '<span class="pv-tag">D' + e.depth + '</span>' : '';
+            // ⚠️修复：position/depth 实际存在 extensions 里（顶层 e.position 只是导出时的 before_char/after_char 字符串），
+            //   旧代码读 e.position/e.depth 永远是 undefined → 预览一直显示 P- / 没有 D 标签，用户看不到触发配置。
+            var _eExt = e.extensions || {};
+            var _ePos = (_eExt.position !== undefined && _eExt.position !== null) ? _eExt.position
+                      : (typeof e.position === 'number' ? e.position : null);
+            var _eDepth = (_eExt.depth !== undefined && _eExt.depth !== null) ? _eExt.depth
+                      : (typeof e.depth === 'number' ? e.depth : null);
+            var posTag = '<span class="pv-tag">P' + (_ePos == null ? '-' : _ePos) + '</span>';
+            var depTag = (_eDepth != null && !e.constant) ? '<span class="pv-tag">D' + _eDepth + '</span>' : '';
+            // 触发类条目显示触发词数量，方便一眼看出"绿灯有没有钥匙"
+            var _eKeys = Array.isArray(e.keys) ? e.keys : [];
+            var keyTag = (!e.constant) ? '<span class="pv-tag' + (_eKeys.length ? '' : ' off') + '" title="' + escHtml(_eKeys.join(' / ')) + '">K' + _eKeys.length + '</span>' : '';
             var disabledTag = e.enabled === false ? '<span class="pv-tag off">禁用</span>' : '';
             eH += '<details class="pv-entry"><summary>'
               + '<span class="pv-entry-summary-main">' + escHtml(label) + '</span>'
               + '<span class="pv-entry-summary-tags">'
-              +   '<span class="sec-right" style="margin-right:0">~' + eTok + 'T ' + constTag + posTag + depTag + disabledTag + '</span>'
+              +   '<span class="sec-right" style="margin-right:0">~' + eTok + 'T ' + constTag + posTag + depTag + keyTag + disabledTag + '</span>'
               +   '<button type="button" class="pv-entry-del" data-pv-entry-del data-entry-idx="' + allEntries.indexOf(e) + '" title="删除该条目">🗑</button>'
               + '</span>'
               + '</summary>'
@@ -14526,7 +14804,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       // 状态栏预览区块：展示生成状态 + 已收集模块 + 预览/重置按钮
       function buildStatusBarPreviewSection() {
         var entries = (cardData.character_book || {}).entries || [];
-        var hasMVU = entries.some(function(e) { return isMVUEntry(e.comment || ''); });
+        var hasMVU = entries.some(function(e) { return isMvuSystemEntry(e.comment || ''); });
         var rxScripts = normalizeRegexScripts(cardData.extensions && cardData.extensions.regex_scripts);
         var statusBarRegex = null;
         for (var i = 0; i < rxScripts.length; i++) {
