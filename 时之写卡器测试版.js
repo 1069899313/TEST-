@@ -1,6 +1,6 @@
 (function() {
 /* ============================================================================
- * 时之写卡器 · Tavern Helper 脚本（整理版）
+ * 时之写卡器 · Tavern Helper 脚本（整理版2026.9.9 22:56）
  * ----------------------------------------------------------------------------
  * 项目类型：后台脚本（Tavern Helper Script · 相当于模板里的 index.ts）
  * 运行形式：单文件 JS，导入到酒馆脚本库，点击脚本按钮打开写卡器
@@ -330,6 +330,81 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 .pv-section .pv-tag.ok:hover{box-shadow:0 3px 10px rgba(22,163,74,.15)}
 .pv-section .pv-mini-btn{font-size:.8em;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--accent-deep);cursor:pointer;flex-shrink:0;transition:all .18s cubic-bezier(.4,0,.2,1);font-weight:500;display:inline-flex;align-items:center;gap:5px}
 .pv-section .pv-mini-btn svg{width:13px;height:13px}
+/* ===== 世界书条目工具条（搜索/展开折叠/优先级同步/新建）===== */
+.pv-entry-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 9px 0;padding:7px 8px;background:var(--surface-soft);border:1px solid var(--line-soft);border-radius:var(--radius-sm)}
+.pv-entry-toolbar .pv-entry-search{flex:1;min-width:110px;padding:6px 10px;font-size:.78em;font-family:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:999px;outline:none;transition:border-color .18s,box-shadow .18s}
+.pv-entry-toolbar .pv-entry-search:focus{border-color:var(--accent-border-strong);box-shadow:0 0 0 3px var(--accent-soft)}
+.pv-entry-toolbar .pv-mini-btn{font-size:.74em;padding:5px 10px}
+.pv-entry-toolbar .pv-mini-btn.on{background:linear-gradient(135deg,var(--accent-soft),rgba(79,70,229,.14));border-color:var(--accent-border-strong);color:var(--accent-deep)}
+.pv-entry-toolbar .pv-new-entry-btn{background:linear-gradient(135deg,var(--accent-soft),rgba(79,70,229,.06));border-color:var(--accent-border)}
+.pv-entry-toolbar .pv-mini-select{font-family:inherit;font-size:.74em;padding:5px 8px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--accent-deep);cursor:pointer;outline:none}
+.pv-entry-toolbar .pv-mini-select:hover{border-color:var(--accent-border)}
+.pv-entry-toolbar .pv-mini-btn.danger{color:var(--terra-text);border-color:var(--terra-border)}
+.pv-entry-toolbar .pv-mini-btn.danger:hover{background:var(--terra-soft);border-color:var(--terra-border-strong)}
+/* ===== Token 预算条 ===== */
+.pv-token-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 9px 0;padding:6px 9px;font-size:.74em;color:var(--muted);background:var(--surface-soft);border:1px solid var(--line-soft);border-radius:var(--radius-sm)}
+.pv-tok-item{display:inline-flex;align-items:baseline;gap:4px;white-space:nowrap}
+.pv-tok-item b{font-weight:600}
+.pv-tok-sub{font-size:.92em;opacity:.7}
+.pv-tok-track{flex:1;min-width:60px;height:6px;border-radius:999px;background:var(--surface-sink);overflow:hidden}
+.pv-tok-fill{display:block;height:100%;border-radius:999px;transition:width .3s ease,background .3s ease}
+.pv-tok-fill.ok{background:linear-gradient(90deg,var(--sage),#4ade80)}
+.pv-tok-fill.warn{background:linear-gradient(90deg,var(--amber),#facc15)}
+.pv-tok-fill.over{background:linear-gradient(90deg,var(--terra),#f87171)}
+.pv-tok-warn{color:var(--terra-text);font-weight:600;white-space:nowrap}
+/* ===== 多选批量条 ===== */
+.pv-batch-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 9px 0;padding:7px 9px;font-size:.76em;color:var(--accent-deep);background:linear-gradient(135deg,var(--accent-soft),transparent);border:1px solid var(--accent-border);border-radius:var(--radius-sm)}
+.pv-batch-bar .pv-batch-all{display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-weight:600}
+.pv-batch-bar #pvSelCount{color:var(--muted);margin-right:2px}
+.pv-entry-check{flex-shrink:0;width:14px;height:14px;accent-color:var(--accent);cursor:pointer;margin-right:2px}
+.pv-section .pv-entry.is-checked{border-left-color:var(--accent);background:var(--accent-soft)}
+/* ===== 开场白预览气泡 ===== */
+.fm-preview-wrap{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow:auto;padding:4px 2px}
+.fm-bubble{max-width:88%;align-self:flex-start;background:var(--surface-soft);border:1px solid var(--line-soft);border-radius:14px 14px 14px 4px;padding:11px 14px;font-size:.86em;line-height:1.75;color:var(--ink);white-space:pre-wrap;word-break:break-word;box-shadow:0 2px 10px rgba(15,23,42,.05)}
+.fm-meta{font-size:.72em;color:var(--muted);margin-bottom:2px}
+/* ===== 拖拽排序 ===== */
+.pv-entry-drag{flex-shrink:0;cursor:grab;color:var(--muted);font-size:.95em;line-height:1;padding:0 2px;user-select:none;opacity:.55;transition:opacity .18s,color .18s}
+.pv-entry-drag:hover{opacity:1;color:var(--accent)}
+.pv-entry-drag:active{cursor:grabbing}
+.pv-section .pv-entry.pv-dragging{opacity:.45;border-left-color:var(--accent);box-shadow:0 6px 18px rgba(79,70,229,.18)}
+.pv-section .pv-entry.pv-drop-top{box-shadow:0 -3px 0 0 var(--accent) inset,0 2px 8px rgba(79,70,229,.12)}
+.pv-section .pv-entry.pv-drop-bottom{box-shadow:0 3px 0 0 var(--accent) inset,0 2px 8px rgba(79,70,229,.12)}
+.pv-section .pv-entry.is-const{border-left-color:var(--sage-border-strong)}
+/* ===== 条目参数直改行 ===== */
+.pv-entry-params{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 0 8px 0;margin-bottom:6px;border-bottom:1px dashed var(--line-soft)}
+.pv-entry-params label{display:inline-flex;align-items:center;gap:4px;font-size:.74em;color:var(--muted);font-weight:500}
+.pv-entry-params input,.pv-entry-params select{font-family:inherit;font-size:1em;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px 6px;outline:none;transition:border-color .18s,box-shadow .18s}
+.pv-entry-params input[type=number]{width:56px}
+.pv-entry-params input[type=text]{width:100%}
+.pv-entry-params input:focus,.pv-entry-params select:focus{border-color:var(--accent-border-strong);box-shadow:0 0 0 2px var(--accent-soft)}
+.pv-entry-params .pv-param-grow{flex:1;min-width:130px}
+/* ===== 高度拖拽把手 ===== */
+.pv-entry-resize{height:12px;margin-top:5px;border-radius:6px;cursor:ns-resize;background:repeating-linear-gradient(90deg,var(--line-soft) 0 6px,transparent 6px 12px);opacity:.5;transition:opacity .18s,background .18s}
+.pv-entry-resize:hover{opacity:1;background:repeating-linear-gradient(90deg,var(--accent-border-strong) 0 6px,transparent 6px 12px)}
+/* ===== 可点击的状态标签 / 复制按钮 ===== */
+.pv-tag-toggle{cursor:pointer;user-select:none}
+.pv-entry-act{flex-shrink:0;display:none;align-items:center;justify-content:center;width:20px;height:20px;border:none;border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;line-height:1;padding:0;margin-left:2px}
+.pv-section .pv-entry summary:hover .pv-entry-act{display:inline-flex}
+.pv-entry-act:hover{background:var(--accent-soft);color:var(--accent-deep)}
+/* ===== 新建条目弹窗 ===== */
+.pv-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:10002;padding:16px}
+.pv-modal{background:var(--surface);border-radius:var(--radius);box-shadow:0 20px 60px rgba(15,23,42,.22);width:100%;max-width:620px;max-height:86vh;display:flex;flex-direction:column;overflow:hidden}
+.pv-modal-head{padding:13px 18px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:600;color:var(--accent-deep);font-size:.95em}
+.pv-modal-body{flex:1;overflow:auto;padding:14px 18px;display:flex;flex-direction:column;gap:12px}
+.pv-modal-label{display:flex;flex-direction:column;gap:5px;font-size:.8em;color:var(--muted);font-weight:500}
+.pv-modal-label input,.pv-modal-label textarea{font-family:inherit;font-size:1.05em;color:var(--ink);background:var(--surface-soft);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 11px;outline:none;resize:vertical;line-height:1.6;transition:border-color .18s,box-shadow .18s}
+.pv-modal-label input:focus,.pv-modal-label textarea:focus{border-color:var(--accent-border-strong);box-shadow:0 0 0 3px var(--accent-soft);background:var(--surface)}
+.pv-modal-hint{font-size:.74em;color:var(--muted);line-height:1.6;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:var(--radius-sm);padding:8px 10px}
+.pv-modal-foot{padding:11px 18px;border-top:1px solid var(--line-soft);display:flex;justify-content:flex-end;gap:8px}
+/* ===== 内容保全模式切换（工作区下拉） ===== */
+.ws-guard-row{display:flex;gap:6px;padding:4px 10px 2px 10px}
+.ws-guard-btn{flex:1;font-family:inherit;font-size:.74em;padding:6px 4px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer;transition:all .18s}
+.ws-guard-btn:hover{border-color:var(--accent-border);color:var(--accent-deep)}
+.ws-guard-btn.on{background:linear-gradient(135deg,var(--accent-soft-strong),var(--accent-soft));border-color:var(--accent-border-strong);color:var(--accent-deep);font-weight:600}
+.ws-guard-hint{font-size:.7em;color:var(--muted);padding:3px 12px 7px 12px;line-height:1.5}
+/* ===== 「下一步推荐」高亮体系胶囊 ===== */
+.ctx-mod.next{background:linear-gradient(135deg,var(--accent-soft-strong),var(--accent-soft));border-color:var(--accent-border-strong);color:var(--accent-deep);box-shadow:0 0 0 2px var(--accent-soft);animation:ctxNextPulse 2.4s ease-in-out infinite}
+@keyframes ctxNextPulse{0%,100%{box-shadow:0 0 0 2px var(--accent-soft)}50%{box-shadow:0 0 0 4px var(--accent-soft-strong)}}
 .pv-section .pv-mini-btn:hover{background:linear-gradient(135deg,var(--accent-soft),var(--surface));border-color:var(--accent-border);color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,70,229,.1)}
 .pv-sub{margin-top:7px}
 .pv-book-name{font-size:.82em;color:var(--accent-deep);background:linear-gradient(135deg,var(--accent-soft),rgba(79,70,229,.1));padding:4px 12px;border-radius:999px;cursor:pointer;border:1px solid transparent;transition:all .2s ease;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
@@ -1459,6 +1534,95 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     return entry;
   }
 
+  // ===== 🆕 手动新建条目：按 comment 命中的模板自动填好全部 ST 参数 =====
+  // 预览面板「+ 新建条目」用。和 applyOps 的新建分支保持同一套默认值，避免手动建的条目参数不全。
+  function makeEntryWithTemplate(comment, content) {
+    var e = {
+      comment: String(comment || '').trim(),
+      content: String(content == null ? '' : content),
+      keys: [],
+      secondary_keys: [],
+      extensions: {}
+    };
+    var tmpl = getEntryTemplate(e.comment);
+    if (tmpl) {
+      e.constant = tmpl.constant;
+      e.selective = tmpl.selective;
+      if (tmpl.order !== undefined) e.insertion_order = tmpl.order;
+      if (tmpl.enabled !== undefined) e.enabled = tmpl.enabled;
+      if (tmpl.use_regex !== undefined) e.use_regex = tmpl.use_regex;
+    } else {
+      e.constant = false;
+      e.selective = true;
+      e.insertion_order = 100;
+    }
+    try { healEntryStrategy(e); } catch(_) {}     // 补齐 extensions.position/depth/probability 等
+    if (!e.constant && (!e.keys || e.keys.length === 0)) {
+      try { e.keys = _deriveEntryKeys(e.comment, tmpl, e.content); } catch(_) {}
+    }
+    if (!e.secondary_keys) e.secondary_keys = [];
+    return e;
+  }
+
+  // ===== 🛡️ 内容保全护栏：防止 AI 在修改已有条目时把内容"缩水" =====
+  // 背景：用户反复要求"保留原内容只做增加"，AI 仍会把 800 字条目改写成 150 字
+  //（体系规范里的"字数≤N字"误导 + 模型偷懒）。提示词已经加了硬约束，这里再加一道代码级兜底：
+  //   merge（默认）：保留 AI 的新内容，同时把原内容里"消失的行"按原顺序补回来 → 绝不丢内容
+  //   warn：照常写入，但把缩水情况明确告诉用户
+  //   off：完全不干预
+  // 用户明确说"重写/重做/精简/压缩"时自动跳过，避免和用户意图对着干。
+  var contentGuardMode = 'merge';            // 'merge' | 'warn' | 'off'
+  var _lastUserInputMirror = '';             // handleSend 里同步一份用户最近输入，供顶层函数判断意图
+
+  function _guardSkipByUserIntent() {
+    var txt = String(_lastUserInputMirror || '');
+    if (!txt) return false;
+    return /(重写|重做|重构|重来|洗牌|全部替换|推翻|从头写|精简|压缩|缩短|删减|瘦身|概括|缩一下)/.test(txt);
+  }
+  // 把 oldText 里"newText 中已不存在"的行，按原顺序插回 newText 对应位置
+  function _mergePreservedContent(oldText, newText) {
+    var oldLines = String(oldText || '').split(/\r?\n/);
+    var out = String(newText || '').split(/\r?\n/);
+    var idxMap = {};
+    for (var j = 0; j < out.length; j++) {
+      var tj = out[j].trim();
+      if (tj && idxMap[tj] === undefined) idxMap[tj] = j;
+    }
+    var anchor = -1;
+    var added = 0;
+    for (var i = 0; i < oldLines.length; i++) {
+      var t = oldLines[i].trim();
+      if (!t) continue;
+      if (idxMap[t] !== undefined) { if (idxMap[t] > anchor) anchor = idxMap[t]; continue; }
+      var at = (anchor >= 0) ? anchor + 1 : 0;
+      out.splice(at, 0, oldLines[i]);
+      for (var k in idxMap) { if (idxMap[k] >= at) idxMap[k]++; }
+      idxMap[t] = at;
+      anchor = at;
+      added++;
+    }
+    return { text: out.join('\n'), added: added };
+  }
+  // 返回 { content, changed, action, oldLen, newLen, restored, mergedLen }
+  function guardEntryContent(oldContent, newContent, comment) {
+    var o = String(oldContent == null ? '' : oldContent);
+    var n = String(newContent == null ? '' : newContent);
+    if (!o.trim() || !n.trim()) return { content: newContent, changed: false, action: 'none' };
+    if (contentGuardMode === 'off') return { content: newContent, changed: false, action: 'off' };
+    if (_guardSkipByUserIntent()) return { content: newContent, changed: false, action: 'skipped' };
+    // 缩水判定：新内容短于原内容的 80%，且至少少了 60 字（避免小条目误判）
+    var shrunk = n.length < o.length * 0.8 && (o.length - n.length) >= 60;
+    if (!shrunk) return { content: newContent, changed: false, action: 'none' };
+    if (contentGuardMode === 'warn') {
+      return { content: newContent, changed: false, action: 'warn', oldLen: o.length, newLen: n.length };
+    }
+    var merged = _mergePreservedContent(o, n);
+    return {
+      content: merged.text, changed: true, action: 'merged',
+      oldLen: o.length, newLen: n.length, restored: merged.added, mergedLen: merged.text.length
+    };
+  }
+
   // ===== 🔑 自动派生触发词（写卡器兜底防线 · 对齐 StageDog 绿灯/向量化/蓝灯策略）=====
   // 仅当 keys 为空时才派生；蓝灯(constant=true)与向量化(vectorized=true)保持空不变
   function _deriveEntryKeys(comment, tmpl, content) {
@@ -1900,21 +2064,27 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '4. **第一轮必须询问尺度**：当用户提出创作需求时，第一轮回复必须询问"你希望这个世界卡是什么尺度？全年龄向/暗黑/NSFW？"，在用户明确回答前不得生成任何具体内容\n' +
     '5. **尺度跟随用户**：只有当用户明确说"NSFW"、"成人"、"色情"、"18禁"等词汇时，才生成对应尺度内容；用户说"全年龄"或未提及尺度时，必须保持全年龄向\n' +
     '6. **不替用户做道德判断**：但内容尺度必须严格跟随用户的明确指令，用户没说的尺度绝不主动添加\n\n' +
-    '=== ⚠️⚠️⚠️ 渐进式信息收集（最高优先级，违反将导致任务失败） ===\n' +
-    '1. **严禁一次性生成所有内容**：每轮对话只生成1-2个体系的内容\n' +
+    '=== ⚠️⚠️⚠️ 执行模式判定（最高优先级，违反将导致任务失败） ===\n' +
+    '0. **先判定模式，再动手**（这一步判错，后面全错）：\n' +
+    '   · 【引导模式】用户只给了模糊方向，或说"继续/下一步/帮我看看/随便发挥"→ 按下面第3、4条的渐进节奏走。\n' +
+    '   · 【指令模式】用户给出了明确具体的增删改要求（点名了条目、给了数量、给了清单、说了"全部/批量/一次性/这些/都"）→ 立即按用户要求**一次性全部执行完**，下方所有"每轮X条"的限制一律失效。\n' +
+    '1. **【指令模式·批量铁律】用户要改多少条，就一次输出多少条 ::: 操作块**：\n' +
+    '   · 用户说"把这30条都改一下""一次性做完""全部加上"→ 同一回复内输出全部操作块，禁止只做几条就说"剩下的下次继续"，禁止反问"要不要继续"，禁止自作主张拆成多轮。\n' +
+    '   · 单次回复承载 20-40 条操作块是完全正常的（每条约200-800字），不要人为缩小批量——那是在浪费用户的请求次数。\n' +
+    '   · 只有当用户明确说"一条一条来/先做一条"时，才逐条输出。\n' +
     '2. **开场白生成时机**：开场白(first_mes)只能在以下情况生成：\n' +
     '   - 用户明确要求"生成��场白"时\n' +
     '   - 信息完整度达到80%以上且用户说"生成角色卡"时\n' +
     '   - 严禁在信息收集阶段（完整度<80%）主动生成开场白\n' +
-    '3. **第一轮对话规则**：\n' +
+    '3. **第一轮对话规则（仅引导模式）**：\n' +
     '   - 必须先询问用户想要的内容尺度（全年龄/暗黑/NSFW）\n' +
     '   - 必须先询问核心铁则和世界基底的具体细节\n' +
     '   - 严禁在第一轮生成世界观描述、开场白、系统指令等完整内容\n' +
-    '   - 第一轮最多生成1条<基础公理>或<核心铁则>条目\n' +
-    '4. **每轮生成限制**：\n' +
-    '   - 每轮最多生成2条世界书条目\n' +
-    '   - 每轮最多更新1-2个顶层字段\n' +
-    '   - 严禁一轮对话同时生成世界观描述+开场白+系统指令+多条目\n' +
+    '   - 引导模式下第一轮最多生成1条<基础公理>或<核心铁则>条目\n' +
+    '4. **引导模式节奏（指令模式下全部无效）**：\n' +
+    '   - 每轮聚焦1-2个体系，避免一次塞满\n' +
+    '   - 每轮更新1-2个顶层字段\n' +
+    '   - 一旦用户给出明确批量指令，立刻切到指令模式全量执行，不要还按引导节奏一条一条挤\n' +
     '5. **进度如实报告**：\n' +
     '   - 状态栏的✅/⏳/❌必须与实际生成的内容匹配\n' +
     '   - 没有生成对应体系的条目，该体系必须标记为❌待完善\n' +
@@ -1928,6 +2098,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '   - 用户信息充足时→直接操作；用户信息模糊时→先澄清1-2句，再操作\n' +
     '   - 绝对禁止：用户给了明确需求，你却回复"好的我理解了""收到"之类空回，完全不输出:::操作块\n\n' +
     '=== ST权重分层8体系（核心架构，必须严格遵循） ===\n\n' +
+    '⚠️【字数上限的适用范围 · 必须看清】下面各体系写的"字数：≤N字"只约束【新建条目】的初始篇幅。\n' +
+    '   修改已有条目时**不受任何字数上限约束**：原条目多少字，改完就至少多少字（只增不减），禁止拿字数上限当缩水借口。\n\n' +
     '**第一部分：3阶常驻体系（总Token≤500，永不截断）**\n\n' +
     '### 1. 基础公理阶\n' +
     '- ST配置：constant=true, position=0, insertion_order=200-250, prevent_recursion=true\n' +
@@ -4249,6 +4421,18 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             existing[match.index].content = tmpContent;
           } else {
             existing[match.index] = Object.assign({}, oldEntry, ne);
+            // ===== 🛡️ 内容保全护栏：AI 想缩水时自动把丢失的原文补回来 =====
+            var _gM = guardEntryContent(oldEntry.content, ne.content, ne.comment);
+            if (_gM.changed) {
+              existing[match.index].content = _gM.content;
+              changeLog._guardMerged = (changeLog._guardMerged || 0) + 1;
+              changeLog._guardDetails = changeLog._guardDetails || [];
+              changeLog._guardDetails.push({ comment: String(ne.comment || ''), oldLen: _gM.oldLen, newLen: _gM.newLen, restored: _gM.restored });
+            } else if (_gM.action === 'warn') {
+              changeLog._guardWarn = (changeLog._guardWarn || 0) + 1;
+              changeLog._guardDetails = changeLog._guardDetails || [];
+              changeLog._guardDetails.push({ comment: String(ne.comment || ''), oldLen: _gM.oldLen, newLen: _gM.newLen, restored: 0, warnOnly: true });
+            }
           }
           modified = true; changeLog.updated++;
         } else {
@@ -5335,7 +5519,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       '9. ⚠️【混合打包】改+增+删可以混在同一回复，按语义→操作组合自由搭配，无需分多次\n' +
       '10. ⚠️【upsert覆盖必填完整】当要改已有条目：先读上方「当前角色卡已有内容」拿完整旧content，:::upsert里输出完整旧内容+改动部分，严禁只输出变化字段（会导致原信息清空）\n' +
       '11. ⚠️只处理用户「最新一条」消息的指令！不要重复处理之前已经回答过的旧指令！\n' +
-      '12. ★★★【只增不删·冲突才改·不冲突保留】用户每条新信息都是在丰富角色卡，不是重写。新信息=新条目直接upsert；与旧内容不冲突=⟦⟧补充条目或upsert追加；与旧内容同一字段矛盾=才upsert覆盖该字段（其余旧内容原样保留）。禁止因"觉得旧内容不够好"就覆盖或删除。';
+      '12. ★★★【只增不删·冲突才改·不冲突保留】用户每条新信息都是在丰富角色卡，不是重写。新信息=新条目直接upsert；与旧内容不冲突=⟦⟧补充条目或upsert追加；与旧内容同一字段矛盾=才upsert覆盖该字段（其余旧内容原样保留）。禁止因"觉得旧内容不够好"就覆盖或删除。\n' +
+      '13. ★★★【内容保全铁律 · 最高优先级】修改已有条目时，:::upsert 里的 content 长度必须 ≥ 原条目长度：只允许"原内容 + 新增/改动"，禁止精简、概括、压缩、省略、改写文风。上面体系规范里的"字数：≤N字"只约束【新建条目】，对修改已有条目完全无效。原条目800字，改完至少还是800字；只有用户明确说"重写/精简/压缩/概括"时才允许变短。违反此条=直接丢失用户内容，视为任务失败。\n' +
+      '14. ★★★【批量执行】用户要求改N条就一次输出N条操作块（几十条也可以），不要分批、不要问"要不要继续"、不要只做几条。';
 
     var fullPrompt = sysPrompt + jsonReminder + '\n\n=== 对话历史（角色卡Tab专属，与MVU Tab完全隔离） ===\n';
 
@@ -5377,6 +5563,42 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         fullPrompt += roleLabel + ': ' + msgContent + '\n\n';
       }
     });
+
+    // ===== 🆕 用户指令最高优先级注入（解决"AI 无视用户要求、擅自缩减内容/缩小批量"）=====
+    // 放在提示词最末尾（紧贴生成位置）：模型对"最后出现的指令"最敏感。
+    // 同时按用户原话自动判定本次任务性质（保留原内容 / 批量执行），把要求写成硬约束。
+    var _lastUserMsg = '';
+    for (var _lui = tabMessages.length - 1; _lui >= 0; _lui--) {
+      if (tabMessages[_lui] && tabMessages[_lui].role === 'user') { _lastUserMsg = String(tabMessages[_lui].content || ''); break; }
+    }
+    _lastUserMsg = _lastUserMsg.trim();
+    if (_lastUserMsg) {
+      var _keepRe = /(保留|保持|别删|不要删|别动|不要动|别改|不要改|只增|只加|只做增加|补充|追加|扩写|丰富|原有|原文|原内容|原有内容|完整保留|合并重复|去重|不要缩减|别缩减|别缩|不能缩)/;
+      var _rewriteRe = /(重写|重做|重构|重来|洗牌|全部替换|推翻|从头写|精简|压缩|缩短|删减|瘦身|概括|缩一下)/;
+      var _batchRe = /(全部|所有|所有的|一次性|一起|批量|逐条|每一条|都改|都加|都做|统一|这些|那几条|这几条|\d+\s*条)/;
+      var _userRuleBlock = '\n\n═══════════════════════════════════════════════════════════════════\n' +
+        '⚠️⚠️⚠️【最高优先级 · 用户最新指令】以下指令优先级高于本提示词中任何通用规则（仅低于输出格式协议）：\n' +
+        '═══════════════════════════════════════════════════════════════════\n' +
+        '用户原话：「' + _lastUserMsg + '」\n';
+      if (_keepRe.test(_lastUserMsg) && !_rewriteRe.test(_lastUserMsg)) {
+        _userRuleBlock +=
+          '\n【本次任务性质判定：保留原内容 + 只做增量（硬约束，不是建议）】\n' +
+          '· 修改任何已有条目时，:::upsert 块内必须输出【原条目完整内容 + 新增/改动部分】，一个字段都不许省略。\n' +
+          '· 改完的 content 长度必须 ≥ 原条目长度；只允许合并重复表述，不允许精简、压缩、概括、省略、改文风。\n' +
+          '· 上面所有"字数：≤N字"的限制只针对新建条目，对本次修改完全无效。\n' +
+          '· 新旧内容冲突时：保留原内容，把冲突字段改成新值，其余原样照抄。\n';
+      }
+      if (_batchRe.test(_lastUserMsg)) {
+        _userRuleBlock +=
+          '\n【本次任务性质判定：批量执行（硬约束）】\n' +
+          '· 用户要求批量处理 → 同一回复内一次性输出全部 ::: 操作块（几十条也可以），禁止分批、禁止只做一部分、禁止问"要不要继续"。\n' +
+          '· 不要因为"条目太多"就只挑几条做；写卡器会自动逐条执行，你只需要全部写出来。\n';
+      }
+      _userRuleBlock += '· 违反以上用户指令 = 任务失败（用户会直接丢失已写好的内容）。\n' +
+        '═══════════════════════════════════════════════════════════════════\n';
+      fullPrompt += _userRuleBlock;
+    }
+
     fullPrompt += '助手: ';
 
     // 额外追加一句"只回答最新指令"的锚点提示
@@ -8878,6 +9100,21 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                       '</div>' +
                     '</div>' +
                   '</div>';
+        // ===== 🛡️ 内容保全模式（防止 AI 修改已有条目时把内容缩减掉）=====
+        items += '<div class="ws-dropdown-divider"></div>';
+        items += '<div class="ws-dropdown-section">内容保全（防AI缩减内容）</div>';
+        var _gModeList = [
+          { v: 'merge', t: '自动合并', d: 'AI 想缩水时自动把丢失的原文补回来（推荐）' },
+          { v: 'warn', t: '仅提醒', d: '照常写入，但会弹窗告诉你哪条缩水了多少字' },
+          { v: 'off', t: '关闭', d: '完全不干预，AI 写什么就是什么' }
+        ];
+        items += '<div class="ws-guard-row">';
+        _gModeList.forEach(function(gm) {
+          items += '<button type="button" class="ws-guard-btn' + (contentGuardMode === gm.v ? ' on' : '') + '" data-guard="' + gm.v + '" title="' + gm.d + '">' + gm.t + '</button>';
+        });
+        items += '</div>';
+        var _gCur = _gModeList.filter(function(g) { return g.v === contentGuardMode; })[0] || _gModeList[0];
+        items += '<div class="ws-guard-hint">当前：' + _gCur.d + '</div>';
         // MVU / Tab 切换
         items += '<div class="ws-dropdown-divider"></div>';
         items += '<div class="ws-dropdown-section">视图切换</div>';
@@ -8903,6 +9140,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         items += '<div class="ws-dropdown-section">导入导出</div>';
         items += '<div class="ws-dropdown-item" data-action="export-log">' + svgIcon('fileExport', 15) + ' 导出聊天记录</div>';
         items += '<div class="ws-dropdown-item" data-action="import-card">' + svgIcon('download', 15) + ' 导入角色卡</div>';
+        items += '<div class="ws-dropdown-item" data-action="import-worldbook" title="把当前角色卡绑定的酒馆世界书条目读进写卡器继续改">' + svgIcon('book', 15) + ' 从酒馆世界书导入条目</div>';
         if (currentTab === 'mvu') {
           items += '<div class="ws-dropdown-divider"></div>';
           items += '<div class="ws-dropdown-section">MVU状态栏工具</div>';
@@ -8940,6 +9178,17 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         });
         // 应用当前字体缩放状态到下拉控件（按钮禁用/百分比）
         applyFontScale(_appFontScale);
+        // 🛡️ 内容保全模式切换
+        dropdown.querySelectorAll('[data-guard]').forEach(function(gb) {
+          gb.addEventListener('click', function(e) {
+            e.stopPropagation();
+            contentGuardMode = this.getAttribute('data-guard');
+            try { saveToStorage(); } catch(_sg) {}
+            renderWorkspaceMenuItems();
+            dropdown.classList.add('show');
+            showToast('🛡️ 内容保全模式已切换：' + this.textContent, 'info');
+          });
+        });
         // 绑定点击
         dropdown.querySelectorAll('.ws-dropdown-item').forEach(function(item) {
           item.addEventListener('click', function() {
@@ -8951,6 +9200,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               var btn = doc.getElementById('exportLogBtn');
               if (btn) btn.click();
             } else if (action === 'import-card') showImportModal();
+            else if (action === 'import-worldbook') importFromTavernWorldbook();
             else if (action === 'manual-import-sb') showManualImportSB();
             else if (action === 'edit-sb-regex') showRegexEditor();
             else if (action === 'qa-summary') handleQuickAction('summary');
@@ -8969,6 +9219,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       var wsEditorView = 'split';      // 'split' | 'edit' | 'preview'
       var wsEditedContent = {};        // nodeKey → 编辑后的内容缓存
       var wsOriginalContent = {};      // nodeKey → 打开时的原始内容（用于 diff）
+      var wsMetaDirty = false;         // 工作台里改过条目参数（常驻/触发/位置/关键词等），需要保存
       function _wsNodeKey(node) { return node ? (node.type + '::' + node.key + (node.index != null ? '::' + node.index : '')) : ''; }
       function _wsGetContent(node) {
         if (!node) return '';
@@ -9069,6 +9320,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (meta.groupWeight != null) { ext.group_weight = meta.groupWeight; delete e.groupWeight; }
         // 兜底：非常驻又没开绿灯的条目在酒馆里永远不会激活，自动补成绿灯
         if (!e.constant && !e.selective) e.selective = true;
+        wsMetaDirty = true;   // 参数改动也要走"保存"才写回存档
       }
       function _wsIsHtml(node, val) {
         if (node && node.type === 'thscript') return true;
@@ -9129,10 +9381,24 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             _wsSetContent(node, wsEditedContent[k]);
             saved++;
           });
+          var metaSaved = wsMetaDirty;
           wsEditedContent = {};
           wsOriginalContent = {};
-          if (saved > 0) { updateProgress(); renderPreview(); showToast('已保存 ' + saved + ' 项更改到角色卡', 'success'); }
-          else showToast('没有未保存的更改', 'info');
+          wsMetaDirty = false;
+          // ⚠️修复：旧版只把内容写进内存 cardData，没有 saveToStorage()，
+          //   也没有刷新"下一步推荐"——工作台里改的常驻/触发/位置/关键词在刷新后会丢，而且阶段条不更新。
+          try { saveToStorage(); } catch(_sv) {}
+          updateProgress();
+          renderPreview();
+          try { updateQuickActions(); } catch(_q) {}
+          try { updateCtxBar(); } catch(_c) {}
+          if (saved > 0 || metaSaved) {
+            var _msg = saved > 0 ? ('已保存 ' + saved + ' 项内容更改') : '已保存条目参数更改';
+            if (saved > 0 && metaSaved) _msg = '已保存 ' + saved + ' 项内容 + 条目参数更改';
+            showToast(_msg + '到角色卡', 'success');
+          } else {
+            showToast('没有未保存的更改', 'info');
+          }
           // 刷新编辑器和工作台预览
           var editorEl = container.querySelector('#wsEditor');
           if (editorEl) editorEl.innerHTML = buildWorkspaceEditor();
@@ -9162,6 +9428,14 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         renderWsArtifact(container);
       }
       function closeWorkspacePanel() {
+        // 未保存的修改：关闭前提醒一次，避免白改（旧版直接丢弃，刷新后全没了）
+        var hasEdits = Object.keys(wsEditedContent).length > 0 || wsMetaDirty;
+        if (hasEdits) {
+          if (!window.confirm('工作台里还有未保存的修改，确定直接关闭吗？\n\n点「保存」才会写回角色卡并存入存档；直接关闭这些修改会丢失。')) return;
+          wsEditedContent = {};
+          wsOriginalContent = {};
+          wsMetaDirty = false;
+        }
         var container = doc.getElementById('wsPanelContainer');
         if (container) container.innerHTML = '';
         // 关闭工作台后刷新预览，确保最新保存的内容立即显示
@@ -9584,6 +9858,27 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 
       function bindEvents() {
         doc.getElementById('closeBtn').addEventListener('click', closeModal);
+        // ===== ⌨️ 全局快捷键：Ctrl/Cmd+S 写入酒馆 · Ctrl/Cmd+F 搜条目 · Ctrl/Cmd+K 新建条目 =====
+        // 注：renderChatUI 可能被多次调用（切Tab/导入卡），用 doc 上的标记避免重复绑定
+        if (!doc.__shizhiShortcutsBound) {
+          doc.__shizhiShortcutsBound = true;
+          doc.addEventListener('keydown', function(e) {
+            var mod = e.ctrlKey || e.metaKey;
+            if (!mod) return;
+            var k = String(e.key || '').toLowerCase();
+            if (k === 's') {
+              e.preventDefault();
+              if (currentTab === 'card') saveCharacter();
+              else showToast('当前在MVU Tab，请切到角色卡Tab再写入酒馆', 'info');
+            } else if (k === 'f') {
+              var sEl = doc.getElementById('pvEntrySearch');
+              if (sEl) { e.preventDefault(); sEl.focus(); sEl.select(); }
+            } else if (k === 'k') {
+              e.preventDefault();
+              showNewEntryModal();
+            }
+          });
+        }
         var input = doc.getElementById('chatInput');
         var sendBtn = doc.getElementById('sendBtn');
         sendBtn.addEventListener('click', handleSend);
@@ -10011,6 +10306,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         // 1. 角色卡数据：替换为全新空对象（彻底切断旧引用）
         cardData = createEmptyCardData();
         if (typeof window !== 'undefined') window.__cardData = cardData;
+        // 预览面板条目偏好也清掉（旧卡的自定义高度/搜索词对新卡没意义）
+        try { pvEntryHeights = {}; pvEntryQuery = ''; } catch(_pvR) {}
 
         // 2. 聊天记录：两边 Tab 全部清空 + 所有别名同步（兼容旧代码对 messages/cardMessages/mvuMessages 的直接引用）
         chatSessions.card = { messages: [], mode: 'normal' };
@@ -10112,6 +10409,10 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             statusBarMode: statusBarMode,
             statusBarCurrentStep: statusBarCurrentStep,
             fontScale: typeof _appFontScale === 'number' ? _appFontScale : 1,
+            // 预览面板条目偏好（自定义高度 / 拖拽是否同步优先级）
+            pvEntryHeights: pvEntryHeights,
+            pvSyncOrder: pvSyncOrder,
+            contentGuardMode: contentGuardMode,
             timestamp: Date.now()
           };
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -10230,6 +10531,10 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             progress = state.progress || 0;
             moduleProgress = state.moduleProgress || { axiom: 0, soft_rules: 0, core_rules: 0, near_constraint: 0, scene_mechanics: 0, entity_interact: 0, narrative_bg: 0, dynamic_adapt: 0, init_var: 0, var_update_rule: 0 };
             if (typeof state.fontScale === 'number') _appFontScale = state.fontScale;
+            // 预览面板条目偏好
+            if (state.pvEntryHeights && typeof state.pvEntryHeights === 'object') pvEntryHeights = state.pvEntryHeights;
+            if (typeof state.pvSyncOrder === 'boolean') pvSyncOrder = state.pvSyncOrder;
+            if (state.contentGuardMode === 'merge' || state.contentGuardMode === 'warn' || state.contentGuardMode === 'off') contentGuardMode = state.contentGuardMode;
 
             // 状态栏：根据恢复的当前Tab决定加载哪一份
             if (activeTab === 'mvu') {
@@ -10355,12 +10660,18 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         var actions = doc.getElementById('ctxActions');
         if (!stage || !actions) return;
         var __tab = (typeof activeTab !== 'undefined') ? activeTab : 'card';
-        var p = progress || 0;
+        var _nsCtx = (__tab === 'card') ? getNextCardStep() : null;
         // ===== 阶段提示 =====
         var stageName, stageIcon;
         if (__tab === 'card') {
-          stageIcon = 'info';
-          stageName = p < 20 ? '定核心铁则' : p < 40 ? '搭世界基底' : p < 60 ? '做实体内容' : p < 80 ? '补叙事背景' : p < 95 ? '做动态适配' : '可写入酒馆';
+          // ⚠️修复：阶段名改用"第一个还没做的体系"，不再用进度百分比分段（否则永远慢一步）
+          if (_nsCtx && _nsCtx.next) {
+            stageIcon = 'info';
+            stageName = '下一步：' + _nsCtx.next.label + ' · 体系 ' + _nsCtx.done + '/' + _nsCtx.total;
+          } else {
+            stageIcon = 'checkCircle';
+            stageName = '八大体系已齐全 ' + (_nsCtx ? _nsCtx.done : 0) + '/' + (_nsCtx ? _nsCtx.total : 0) + ' · 可写入酒馆';
+          }
         } else {
           // MVU Tab：静态阶段标签（进度由8步chip展示，避免与chip重复冲突）
           stageIcon = 'sliders';
@@ -10383,11 +10694,13 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             { key: 'narrative_bg', icon: 'book', name: '叙事背景' },
             { key: 'dynamic_adapt', icon: 'refreshCycle', name: '动态适配' }
           ];
+          var _nextKey = (_nsCtx && _nsCtx.next) ? _nsCtx.next.key : '';
           labels.forEach(function(l) {
             var val = (mp[l.key] ? 100 : 0);
             if (aiMp[l.key] > 0) val = Math.max(val, aiMp[l.key]);
             var cls = val >= 100 ? 'done' : val > 0 ? 'prog' : '';
-            h += '<button class="ctx-mod ' + cls + '" data-mod="' + l.key + '">' + svgIcon(l.icon, 13) + ' ' + l.name + '</button>';
+            if (l.key === _nextKey && cls !== 'done') cls += ' next';   // 高亮"下一步该做"的体系
+            h += '<button class="ctx-mod ' + cls + '" data-mod="' + l.key + '" title="' + (l.key === _nextKey ? '推荐下一步：' : '点击让AI完善：') + l.name + '">' + svgIcon(l.icon, 13) + ' ' + l.name + '</button>';
           });
         } else {
           // MVU Tab：8步紧凑状态 chip + 阶段自适应主操作按钮
@@ -10440,26 +10753,27 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       function updateQuickActions() {
         var qa = doc.getElementById('quickActions');
         if (!qa) return;
-        var p = progress || 0;
-        var hasFirst = cardData.first_mes && cardData.first_mes.length > 50;
-        var hasEntries = cardData.character_book && cardData.character_book.entries && cardData.character_book.entries.length > 0;
-        var hasMVU = hasEntries && cardData.character_book.entries.some(function(e) {
-          return isMvuSystemEntry(e.comment || '');
-        });
 
         // ========== 精简版：仅留「阶段主操作」+「生成」+ 2 mini（写入/清空）==========
         // 模块导航/质检/优化/权重/分组/进度总览等已迁至「工作区」下拉菜单，避免拥挤
         var actions = [];
         if (currentTab === 'card') {
-          // 阶段主操作（hl）
-          if (p < 20)        actions.push({ action: 'core_rules',      icon: 'lock',         label: '定核心铁则',   hl: true });
-          else if (p < 40)   actions.push({ action: 'axiom',           icon: 'axiom',        label: '搭世界基底',   hl: true });
-          else if (p < 60)   actions.push({ action: 'entity_interact', icon: 'users',        label: '做实体内容',   hl: true });
-          else if (p < 80)   actions.push({ action: 'dynamic_adapt',   icon: 'refreshCycle', label: '做动态适配',   hl: true });
-          else if (p < 95)   actions.push({ action: 'goto_mvu',        icon: 'sliders',      label: '去做MVU变量/状态栏', hl: true });
-          // 生成角色卡并写入酒馆（新：直接调用 tavern API 装配导出，而非再让AI输出完整JSON）
-          // p>=95 时高亮；p<95 也能点（允许用户提前导出），但不做高亮提示
-          actions.push({ action: 'generate', icon: 'sparkle', label: '生成并写入酒馆', title: '通过写卡器装配角色卡（含MVU/正则/脚本），直接写入到酒馆当前角色卡', hl: p >= 95 });
+          // ===== 阶段主操作：按"第一个还没做的体系"推荐（不再用总进度分段，避免晚一步）=====
+          var _ns = getNextCardStep();
+          var _hasFirstMes = !!(cardData.first_mes && cardData.first_mes.trim().length >= 50);
+          var _hasMvuEntries = ((cardData.character_book || {}).entries || []).some(function(e) { return isMvuSystemEntry(e.comment || ''); });
+          if (_ns.next) {
+            actions.push({
+              action: _ns.next.action, icon: _ns.next.icon, label: '下一步：' + _ns.next.label, hl: true,
+              title: '已完成的体系会自动跳过（当前体系 ' + _ns.done + '/' + _ns.total + '）· 点击后让AI补这个体系'
+            });
+          } else if (!_hasFirstMes) {
+            actions.push({ action: 'opening', icon: 'film', label: '写开场白', hl: true, title: '八大体系已齐全，接下来生成开场白（first_mes）' });
+          } else if (!_hasMvuEntries) {
+            actions.push({ action: 'goto_mvu', icon: 'sliders', label: '去做MVU变量/状态栏', hl: true, title: '世界观体系已齐全，可去MVU Tab做变量与状态栏（可选）' });
+          }
+          // 生成角色卡并写入酒馆（始终可点，体系齐全时高亮）
+          actions.push({ action: 'generate', icon: 'sparkle', label: '生成并写入酒馆', title: '通过写卡器装配角色卡（含MVU/正则/脚本），直接写入到酒馆当前角色卡', hl: !_ns.next && _hasFirstMes });
         } else {
           // MVU Tab：基于8条工作流的三阶段按钮组
           var _chk = checkMvu8Entries(cardData);
@@ -10568,7 +10882,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           return;
         }
         // 在MVU Tab中点击了角色卡专属动作 → 自动切到角色卡Tab再执行
-        var cardOnlyActions = ['core_rules', 'axiom', 'soft_rules', 'entity_interact', 'scene_mechanics', 'narrative_bg', 'dynamic_adapt', 'opening', 'generate', 'qc', 'optimize', 'weight', 'group'];
+        var cardOnlyActions = ['core_rules', 'axiom', 'soft_rules', 'near_constraint', 'situation', 'entity_interact', 'scene_mechanics', 'narrative_bg', 'dynamic_adapt', 'opening', 'generate', 'qc', 'optimize', 'weight', 'group'];
         if (currentTab === 'mvu' && cardOnlyActions.indexOf(action) >= 0) {
           showToast('「' + action + '」是角色卡专属功能，正在切换到角色卡生成Tab...', 'info');
           switchTab('card');
@@ -11086,6 +11400,43 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       }
 
       // ===== 撤回：移除某条AI消息 + 回滚其cardData修改 =====
+      // ===== 撤回前的差异预览：告诉用户这一撤会回滚掉什么 =====
+      function describeSnapshotDiff(aiMsgIndex) {
+        var snap = cardDataSnapshots[_snapTabKey()][aiMsgIndex];
+        if (!snap) return '';
+        var out = [];
+        try {
+          ['name', 'description', 'personality', 'scenario', 'first_mes', 'creator_notes', 'system_prompt'].forEach(function(f) {
+            var a = String(snap[f] == null ? '' : snap[f]);
+            var b = String(cardData[f] == null ? '' : cardData[f]);
+            if (a !== b) out.push('· 字段 ' + f + '：' + a.length + '字 → ' + b.length + '字');
+          });
+          var oldE = (snap.character_book && snap.character_book.entries) || [];
+          var newE = (cardData.character_book && cardData.character_book.entries) || [];
+          var oldMap = {}, newMap = {};
+          oldE.forEach(function(e) { var k = String(e.comment || ''); if (k) oldMap[k] = e; });
+          newE.forEach(function(e) { var k = String(e.comment || ''); if (k) newMap[k] = e; });
+          var added = [], removed = [], changed = [];
+          Object.keys(newMap).forEach(function(k) { if (!oldMap[k]) added.push(k); });
+          Object.keys(oldMap).forEach(function(k) { if (!newMap[k]) removed.push(k); });
+          Object.keys(newMap).forEach(function(k) {
+            if (!oldMap[k]) return;
+            var la = String(oldMap[k].content || '').length, lb = String(newMap[k].content || '').length;
+            if (la !== lb) changed.push(k + '（' + la + '字 → ' + lb + '字）');
+          });
+          if (added.length) out.push('· 新增条目 ' + added.length + ' 条：' + added.slice(0, 5).join('、') + (added.length > 5 ? ' 等' : ''));
+          if (removed.length) out.push('· 删除条目 ' + removed.length + ' 条：' + removed.slice(0, 5).join('、') + (removed.length > 5 ? ' 等' : ''));
+          if (changed.length) out.push('· 内容改动 ' + changed.length + ' 条：' + changed.slice(0, 5).join('、') + (changed.length > 5 ? ' 等' : ''));
+          var oldRx = (((snap.extensions || {}).regex_scripts) || []).length;
+          var newRx = (((cardData.extensions || {}).regex_scripts) || []).length;
+          if (oldRx !== newRx) out.push('· 正则脚本：' + oldRx + ' → ' + newRx);
+          var oldSc = (((snap.extensions || {}).tavern_helper || {}).scripts || []).length;
+          var newSc = (((cardData.extensions || {}).tavern_helper || {}).scripts || []).length;
+          if (oldSc !== newSc) out.push('· 脚本：' + oldSc + ' → ' + newSc);
+        } catch(_) {}
+        if (!out.length) return '';
+        return '\n\n将回滚的修改：\n' + out.join('\n');
+      }
       function revokeAIMessage(aiIdx) {
         var msgs = getCurrentMessages();
         if (aiIdx < 0 || aiIdx >= msgs.length || msgs[aiIdx].role !== 'assistant') {
@@ -11110,6 +11461,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (aiCountAfter > 0) confirmMsg += ' 及其后 ' + aiCountAfter + ' 条AI回复';
         confirmMsg += '\n✅ 回滚对角色卡/变量系统的修改';
         confirmMsg += '\n✅ 保留上一条用户消息，可重新生成';
+        confirmMsg += describeSnapshotDiff(aiIdx);
         if (!confirm(confirmMsg)) return;
         // 回滚cardData到该AI消息应用修改前的快照
         var ok = restoreCardDataSnapshot(aiIdx);
@@ -11145,6 +11497,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         msg += '\n✅ 保留当前这条用户消息本身，可重新生成下面的AI回答';
         msg += '\nℹ️ 状态栏界面和角色卡界面互不影响（仅回滚当前Tab）';
         if (aiCountAfter === 0 && userCountAfter === 0) { showToast('当前这条用户消息之后没有任何消息可撤回', 'info'); return; }
+        msg += describeSnapshotDiff(userIdx + 1);
         if (!confirm(msg)) return;
         // 该用户消息后的AI消息索引 = userIdx+1
         var aiIdx = userIdx + 1;
@@ -11984,6 +12337,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         input.value = '';
         input.style.height = 'auto';  // 发送后重置输入框高度
         lastUserInput = text;
+        // 同步到顶层镜像变量：内容保全护栏（guardEntryContent）在顶层函数里要读它判断用户意图
+        try { _lastUserInputMirror = text; } catch(_lui) {}
         var genKw = ['生成角色卡','生成完整角色卡','导出角色卡','写入酒馆','完整生成'];
         var isGenCmd = genKw.some(function(k) { return text === k || text.indexOf(k) >= 0; });
         if (isGenCmd && progress >= 30) {
@@ -12459,6 +12814,20 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               var oldEntry = cd.character_book.entries[foundIdx];
               var mergedEntry = Object.assign({}, oldEntry, basePatch);
               if (extPatch) mergedEntry.extensions = Object.assign({}, (oldEntry && oldEntry.extensions) || {}, extPatch);
+              // ===== 🛡️ 内容保全护栏：AI 想缩水时自动把丢失的原文补回来 =====
+              if (basePatch.content !== undefined && oldEntry && oldEntry.content) {
+                var _g = guardEntryContent(oldEntry.content, basePatch.content, mergedEntry.comment);
+                if (_g.changed) {
+                  mergedEntry.content = _g.content;
+                  changeLog._guardMerged = (changeLog._guardMerged || 0) + 1;
+                  changeLog._guardDetails = changeLog._guardDetails || [];
+                  changeLog._guardDetails.push({ comment: String(mergedEntry.comment || ''), oldLen: _g.oldLen, newLen: _g.newLen, restored: _g.restored });
+                } else if (_g.action === 'warn') {
+                  changeLog._guardWarn = (changeLog._guardWarn || 0) + 1;
+                  changeLog._guardDetails = changeLog._guardDetails || [];
+                  changeLog._guardDetails.push({ comment: String(mergedEntry.comment || ''), oldLen: _g.oldLen, newLen: _g.newLen, restored: 0, warnOnly: true });
+                }
+              }
               // ===== 🩹 补齐模板参数 + 自愈常驻策略（AI 没写的参数不再丢）=====
               try { healEntryStrategy(mergedEntry); } catch(_he1) {}
               var _tmplHere = getEntryTemplate(mergedEntry.comment || '');
@@ -13265,6 +13634,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                       'warning', 9000);
                   } catch(_) {}
                 }
+                // 🛡️ 内容保全护栏结果提示
+                var _gMsgOps = buildGuardToast(crOps);
+                if (_gMsgOps) { try { showToast(_gMsgOps, 'warning', 13000); } catch(_) {} }
                 renderPreview();
                 saveToStorage();
               } else if (ops.length > 0) {
@@ -13338,6 +13710,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                           'warning', 9000);
                       } catch(_) {}
                     }
+                    // 🛡️ 内容保全护栏结果提示
+                    var _gMsgJson = buildGuardToast(cr);
+                    if (_gMsgJson) { try { showToast(_gMsgJson, 'warning', 13000); } catch(_) {} }
                   }
                 } catch(e) { /* ignore */ }
               } else if (hasData) {
@@ -13641,6 +14016,32 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           result.dynamic_adapt = true;
         }
         return result;
+      }
+
+      // ===== 「下一步推荐」用的体系顺序（与系统提示词 步骤1-6 完全一致）=====
+      // ⚠️修复：旧版按"总进度百分比"分段推荐（p<20→核心铁则、p<40→世界基底…），
+      //   于是刚做完核心铁则、进度还没跨过 20% 时，按钮还写着"定核心铁则"；
+      //   用户手动补了世界基底，进度落进 [20,40) 区间，按钮又变成"搭世界基底"——永远慢一步。
+      //   现在改为按"条目实际完成情况"推荐：按顺序取第一个还没做的体系，做完的自动跳过。
+      var CARD_STEP_ORDER = [
+        { key: 'core_rules',      action: 'core_rules',      icon: 'lock',         label: '定核心铁则' },
+        { key: 'axiom',           action: 'axiom',           icon: 'axiom',        label: '搭世界基底' },
+        { key: 'entity_interact', action: 'entity_interact', icon: 'users',        label: '做实体内容' },
+        { key: 'scene_mechanics', action: 'scene_mechanics', icon: 'sword',        label: '加场景规则' },
+        { key: 'narrative_bg',    action: 'narrative_bg',    icon: 'book',         label: '补叙事背景' },
+        { key: 'dynamic_adapt',   action: 'dynamic_adapt',   icon: 'refreshCycle', label: '做动态适配' },
+        { key: 'near_constraint', action: 'near_constraint', icon: 'target',       label: '加近场约束' },
+        { key: 'soft_rules',      action: 'soft_rules',      icon: 'handshake',    label: '写交互软规则' }
+      ];
+      function getNextCardStep() {
+        var mp = getModuleProgress();
+        var done = 0, next = null, doneKeys = [];
+        for (var i = 0; i < CARD_STEP_ORDER.length; i++) {
+          var s = CARD_STEP_ORDER[i];
+          if (mp[s.key]) { done++; doneKeys.push(s.key); }
+          else if (!next) { next = s; }
+        }
+        return { next: next, done: done, total: CARD_STEP_ORDER.length, doneKeys: doneKeys };
       }
 
       function calcProgress() {
@@ -14536,6 +14937,12 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       // ===== 预览渲染 =====
       /* 改进V：renderPreview防抖——合并连续渲染请求（如批量更新entries时），避免16+调用点全量重建卡顿 */
       var _renderPreviewTimer = null;
+      // 预览面板「世界书条目」的用户偏好（都随存档持久化）
+      var pvEntryHeights = {};    // 条目名 → 内容区固定高度(px)，0/未设置=自适应
+      var pvEntryQuery = '';      // 条目搜索关键字
+      var pvSyncOrder = false;    // 拖拽排序时是否同步写入 insertion_order
+      var pvMultiSelect = false;  // 多选模式
+      var pvSelectedIdx = {};     // 多选模式下已选中的条目索引
       function renderPreview() {
         if (_renderPreviewTimer) clearTimeout(_renderPreviewTimer);
         _renderPreviewTimer = setTimeout(_renderPreviewImpl, 80);
@@ -14691,14 +15098,57 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         var bookTokCount = 0;
         entries.forEach(function(e) { bookTokCount += countTokens(e.content || ''); });
 
-        // 世界书条目：完整显示全部条目，每个条目独立折叠（默认折叠）
+        // ===== 世界书条目：工具条（搜索/批量/模板/导入导出）+ 拖拽排序 + 参数直改 + 自定义高度 =====
+        var _pvQ = String(pvEntryQuery || '');
+        // 常驻/触发 Token 预算统计
+        var _permTok = 0, _trigTok = 0, _noKeyCount = 0;
+        entries.forEach(function(_e) {
+          var _t = countTokens(_e.content || '');
+          if (_e.constant) _permTok += _t; else _trigTok += _t;
+          if (!_e.constant && (!_e.keys || _e.keys.length === 0)) _noKeyCount++;
+        });
+        var _permPct = Math.min(100, Math.round(_permTok / 500 * 100));
+        var _permCls = _permTok > 800 ? 'over' : (_permTok > 500 ? 'warn' : 'ok');
+        var _budgetRow = '<div class="pv-token-bar">' +
+            '<span class="pv-tok-item"><b style="color:var(--sage-text)">常驻 ' + _permTok + 'T</b><span class="pv-tok-sub">/ 建议≤500</span></span>' +
+            '<span class="pv-tok-track"><span class="pv-tok-fill ' + _permCls + '" style="width:' + _permPct + '%"></span></span>' +
+            '<span class="pv-tok-item"><b style="color:var(--amber-text)">触发 ' + _trigTok + 'T</b></span>' +
+            (_noKeyCount > 0 ? '<span class="pv-tok-warn" title="这些触发条目没有关键词，酒馆绿灯模式下永远不会激活">⚠️ ' + _noKeyCount + ' 条无触发词</span>' : '') +
+          '</div>';
+        var _tplOptions = '<option value="">＋ 模板…</option>' +
+          '<option value="character">人物条目</option><option value="place">地点场景</option>' +
+          '<option value="item">物品道具</option><option value="faction">势力组织</option>' +
+          '<option value="mechanic">场景机制</option><option value="rule">世界规则</option>' +
+          '<option value="lore">叙事背景</option><option value="ironrule">核心铁则</option>';
+        var _toolbar = '<div class="pv-entry-toolbar">'
+          + '<input type="text" class="pv-entry-search" id="pvEntrySearch" placeholder="搜索条目名/内容…" value="' + escAttr(_pvQ) + '" title="输入关键字即时筛选下方条目">'
+          + '<button type="button" class="pv-mini-btn" data-pv-list-action="expand" title="展开全部条目">展开</button>'
+          + '<button type="button" class="pv-mini-btn" data-pv-list-action="collapse" title="折叠全部条目">折叠</button>'
+          + '<button type="button" class="pv-mini-btn' + (pvMultiSelect ? ' on' : '') + '" data-pv-list-action="multi" title="多选：批量删除 / 批量改常驻 / 批量导出">多选</button>'
+          + '<button type="button" class="pv-mini-btn' + (pvSyncOrder ? ' on' : '') + '" data-pv-list-action="sync-order" title="开启后，拖动排序会同步写入条目的优先级(insertion_order)，让酒馆里的顺序也跟着变；MVU条目不受影响">优先级同步：' + (pvSyncOrder ? '开' : '关') + '</button>'
+          + '<button type="button" class="pv-mini-btn" data-pv-list-action="batch-keys" title="给所有没有触发词的触发条目一次性补上触发词">批量补触发词</button>'
+          + '<select class="pv-mini-select" id="pvTplSelect" title="从模板新建条目（会自动填好内容骨架和 ST 参数）">' + _tplOptions + '</select>'
+          + '<button type="button" class="pv-mini-btn pv-new-entry-btn" data-pv-list-action="new" title="手动新建一个世界书条目（参数按条目前缀自动填好）">＋ 新建</button>'
+          + '<button type="button" class="pv-mini-btn" data-pv-list-action="import" title="从 JSON 文本/文件导入条目（合并同名条目）">导入</button>'
+          + '<button type="button" class="pv-mini-btn" data-pv-list-action="export" title="导出全部条目为 JSON 文件（可用于备份/分享）">导出</button>'
+          + '</div>'
+          + _budgetRow
+          + (pvMultiSelect ? '<div class="pv-batch-bar">'
+              + '<label class="pv-batch-all"><input type="checkbox" id="pvCheckAll"> 全选</label>'
+              + '<span id="pvSelCount">已选 0 条</span>'
+              + '<button type="button" class="pv-mini-btn" data-pv-batch="const">设为常驻</button>'
+              + '<button type="button" class="pv-mini-btn" data-pv-batch="trig">设为触发</button>'
+              + '<button type="button" class="pv-mini-btn" data-pv-batch="keys">补触发词</button>'
+              + '<button type="button" class="pv-mini-btn" data-pv-batch="export">导出选中</button>'
+              + '<button type="button" class="pv-mini-btn danger" data-pv-batch="delete">删除选中</button>'
+            + '</div>' : '');
         if (entries.length > 0) {
-          var eH = '<div class="pv-entry-list">';
+          var eH = _toolbar + '<div class="pv-entry-list">';
           for (var i = 0; i < entries.length; i++) {
             var e = entries[i];
             var label = e.comment || ('条目' + (i+1));
+            var realIdx = allEntries.indexOf(e);
             var eTok = countTokens(e.content || '');
-            var constTag = e.constant ? '<span class="pv-tag ok">常驻</span>' : '<span class="pv-tag">触发</span>';
             // ⚠️修复：position/depth 实际存在 extensions 里（顶层 e.position 只是导出时的 before_char/after_char 字符串），
             //   旧代码读 e.position/e.depth 永远是 undefined → 预览一直显示 P- / 没有 D 标签，用户看不到触发配置。
             var _eExt = e.extensions || {};
@@ -14706,28 +15156,73 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                       : (typeof e.position === 'number' ? e.position : null);
             var _eDepth = (_eExt.depth !== undefined && _eExt.depth !== null) ? _eExt.depth
                       : (typeof e.depth === 'number' ? e.depth : null);
+            var _eOrder = (e.insertion_order !== undefined) ? e.insertion_order
+                        : ((_eExt.order !== undefined && _eExt.order !== null) ? _eExt.order : null);
+            // 常驻/触发标签：点击即可切换（MVU体系条目除外，避免破坏变量系统）
+            var _canToggle = !isMvuSystemEntry(label);
+            var constTag = '<span class="pv-tag ' + (e.constant ? 'ok ' : '') + 'pv-tag-toggle" data-pv-toggle-const="' + realIdx + '" title="' + (_canToggle ? '点击切换 常驻/触发' : 'MVU体系条目不允许在此切换') + '">' + (e.constant ? '常驻' : '触发') + '</span>';
             var posTag = '<span class="pv-tag">P' + (_ePos == null ? '-' : _ePos) + '</span>';
             var depTag = (_eDepth != null && !e.constant) ? '<span class="pv-tag">D' + _eDepth + '</span>' : '';
-            // 触发类条目显示触发词数量，方便一眼看出"绿灯有没有钥匙"
+            // 触发类条目显示触发词数量，方便一眼看出"绿灯有没有钥匙"；点它可自动补全/查看
             var _eKeys = Array.isArray(e.keys) ? e.keys : [];
-            var keyTag = (!e.constant) ? '<span class="pv-tag' + (_eKeys.length ? '' : ' off') + '" title="' + escHtml(_eKeys.join(' / ')) + '">K' + _eKeys.length + '</span>' : '';
+            var keyTag = (!e.constant)
+              ? '<span class="pv-tag pv-tag-toggle' + (_eKeys.length ? '' : ' off') + '" data-pv-derive-keys="' + realIdx + '" title="' + (_eKeys.length ? ('触发词：' + _eKeys.join(' / ') + '（点击可重新派生）') : '这条还没有触发词，点一下自动补全') + '">K' + _eKeys.length + '</span>'
+              : '';
             var disabledTag = e.enabled === false ? '<span class="pv-tag off">禁用</span>' : '';
-            eH += '<details class="pv-entry"><summary>'
-              + '<span class="pv-entry-summary-main">' + escHtml(label) + '</span>'
-              + '<span class="pv-entry-summary-tags">'
-              +   '<span class="sec-right" style="margin-right:0">~' + eTok + 'T ' + constTag + posTag + depTag + keyTag + disabledTag + '</span>'
-              +   '<button type="button" class="pv-entry-del" data-pv-entry-del data-entry-idx="' + allEntries.indexOf(e) + '" title="删除该条目">🗑</button>'
-              + '</span>'
+            // 自定义高度（按 comment 记忆）
+            var _h = pvEntryHeights[String(label)] || 0;
+            var bodyStyle = _h ? (' style="max-height:' + _h + 'px;overflow:auto"') : '';
+            var searchBlob = (String(label) + ' ' + String(e.content || '').slice(0, 800)).toLowerCase();
+            // 参数直改行：条目名/位置/深度/优先级/关键词，不用再去工作台
+            var _posOpts = '';
+            var _posLabels = { 0: '0 角色定义前', 1: '1 角色定义后', 2: '2 示例消息前', 3: '3 示例消息后', 4: '4 按深度注入' };
+            for (var _pi = 0; _pi <= 4; _pi++) {
+              _posOpts += '<option value="' + _pi + '"' + (String(_ePos) === String(_pi) ? ' selected' : '') + '>' + _posLabels[_pi] + '</option>';
+            }
+            var paramsRow = '<div class="pv-entry-params">'
+              + '<label class="pv-param-grow" title="条目名(comment)：改这里等于重命名，不影响内容">条目名<input type="text" data-pv-field="comment" data-pv-idx="' + realIdx + '" value="' + escAttr(label) + '"></label>'
+              + '<label title="ST 注入位置：0/1=角色定义前后，2/3=示例消息前后，4=按深度注入（作者注）">位置<select data-pv-field="position" data-pv-idx="' + realIdx + '">' + _posOpts + '</select></label>'
+              + '<label title="position=4 时的注入深度（越大越靠后）">深度<input type="number" data-pv-field="depth" data-pv-idx="' + realIdx + '" value="' + (_eDepth == null ? 4 : _eDepth) + '" min="0" max="30"></label>'
+              + '<label title="优先级 insertion_order，越大越先注入">优先级<input type="number" data-pv-field="order" data-pv-idx="' + realIdx + '" value="' + (_eOrder == null ? 100 : _eOrder) + '" min="0" max="1000"></label>'
+              + '<label class="pv-param-grow" title="触发词，逗号分隔；常驻条目可留空">关键词<input type="text" data-pv-field="keys" data-pv-idx="' + realIdx + '" value="' + escAttr(_eKeys.join(', ')) + '" placeholder="逗号分隔"></label>'
+              + '</div>';
+            eH += '<details class="pv-entry' + (e.constant ? ' is-const' : '') + (pvMultiSelect && pvSelectedIdx[realIdx] ? ' is-checked' : '') + '" data-pv-entry-row="' + realIdx + '" data-pv-search="' + escAttr(searchBlob) + '">'
+              + '<summary>'
+              +   (pvMultiSelect ? '<input type="checkbox" class="pv-entry-check" data-pv-check="' + realIdx + '"' + (pvSelectedIdx[realIdx] ? ' checked' : '') + ' title="选中这条">' : '')
+              +   '<span class="pv-entry-drag" draggable="true" title="按住拖动可调整条目顺序（顺序会影响预览与导出，开启「优先级同步」后也会写入优先级）">⠿</span>'
+              +   '<span class="pv-entry-summary-main">' + escHtml(label) + '</span>'
+              +   '<span class="pv-entry-summary-tags">'
+              +     '<span class="sec-right" style="margin-right:0">~' + eTok + 'T ' + constTag + posTag + depTag + keyTag + disabledTag + '</span>'
+              +     '<button type="button" class="pv-entry-act" data-pv-entry-copy="' + realIdx + '" title="复制这条的JSON到剪贴板">⬇</button>'
+              +     '<button type="button" class="pv-entry-act" data-pv-entry-dup="' + realIdx + '" title="复制该条目（做变体）">⧉</button>'
+              +     '<button type="button" class="pv-entry-del" data-pv-entry-del data-entry-idx="' + realIdx + '" title="删除该条目">🗑</button>'
+              +   '</span>'
               + '</summary>'
-              + '<div class="pv-entry-body"><div class="pv-entry-content pv-editable" data-edit-type="entry" data-edit-index="' + allEntries.indexOf(e) + '">' + escHtml(e.content || '') + '</div></div></details>';
+              + '<div class="pv-entry-body">'
+              +   paramsRow
+              +   '<div class="pv-entry-content pv-editable" data-edit-type="entry" data-edit-index="' + realIdx + '"' + bodyStyle + '>' + escHtml(e.content || '') + '</div>'
+              +   '<div class="pv-entry-resize" data-pv-entry-resize="' + realIdx + '" title="上下拖动调整显示高度 · 双击恢复自适应高度"></div>'
+              + '</div></details>';
           }
           eH += '</div>';
-          h += '<div class="pv-section"><h3><span class="sec-left"><span class="dot full"></span>' + svgIcon('book', 14) + ' <span class="pv-book-name">' + escHtml(bookName) + '</span></span><span class="sec-right">' + entries.length + '条 · ~' + bookTokCount + 'T</span><span class="pv-toggle" title="折叠/展开"></span></h3>' + eH + '</div>';
+          var _cntHtml = '<span id="pvEntryCount">' + entries.length + ' 条</span>';
+          h += '<div class="pv-section"><h3><span class="sec-left"><span class="dot full"></span>' + svgIcon('book', 14) + ' <span class="pv-book-name">' + escHtml(bookName) + '</span></span><span class="sec-right">' + _cntHtml + ' · ~' + bookTokCount + 'T</span><span class="pv-toggle" title="折叠/展开"></span></h3>' + eH + '</div>';
         } else {
-          h += '<div class="pv-section"><h3><span class="sec-left"><span class="dot empty"></span>' + svgIcon('book', 14) + ' <span class="pv-book-name">' + escHtml(bookName) + '</span></span><span class="pv-toggle"></span></h3><div class="pv-empty">待生成...</div></div>';
+          h += '<div class="pv-section"><h3><span class="sec-left"><span class="dot empty"></span>' + svgIcon('book', 14) + ' <span class="pv-book-name">' + escHtml(bookName) + '</span></span><span class="pv-toggle"></span></h3>' + _toolbar + '<div class="pv-empty">还没有条目：可以让AI生成，也可以点「＋ 新建条目」手动添加。</div></div>';
         }
 
-        h += sec('film', '开场白', cardData.first_mes, cardData.first_mes ? (cardData.first_mes.length + '字') : '', 'first_mes');
+        // ===== 开场白：带"预览"按钮（渲染成聊天气泡看观感）=====
+        var _fmHas = !!(cardData.first_mes && String(cardData.first_mes).trim());
+        h += '<div class="pv-section"><h3>'
+          + '<span class="sec-left"><span class="dot ' + (_fmHas ? 'full' : 'empty') + '"></span>' + svgIcon('film', 14) + ' 开场白</span>'
+          + (_fmHas ? '<span class="sec-right">' + cardData.first_mes.length + '字</span>' : '')
+          + (_fmHas ? '<button type="button" class="pv-mini-btn" data-pv-action="preview-firstmes" title="把开场白渲染成聊天气泡，检查观感">预览</button>' : '')
+          + '<span class="pv-edit-hint" title="双击编辑">✏️</span>'
+          + '<span class="pv-toggle" title="折叠/展开"></span></h3>'
+          + (_fmHas
+              ? '<div class="pv-content pv-editable" data-edit-type="field" data-edit-key="first_mes">' + escHtml(cardData.first_mes) + '</div>'
+              : '<div class="pv-empty pv-editable" data-edit-type="field" data-edit-key="first_mes">待生成...</div>')
+          + '</div>';
         // 身份定位（自动提取：personality+description 前 50 字）
         var autoIdExtract = '';
         if (cardData.personality || cardData.description) {
@@ -14863,6 +15358,499 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         return '<div class="pv-section"><h3><span class="sec-left"><span class="dot ' + dotCls + '"></span>' + svgIcon('sliders', 14) + ' 状态栏总览</span><span class="sec-right">' + right + '</span><span class="pv-toggle"></span></h3>' + sH + '</div>';
       }
 
+      // ===== 📦 条目模板库（新建条目时自动填好骨架）=====
+      var ENTRY_SKELETONS = {
+        character: { comment: '<重要角色>新角色', content: '姓名：\n年龄：\n身份：\n外貌：\n性格：\n背景：\n人际关系：\n秘密：' },
+        place:     { comment: '<地点场景>新地点', content: '概述：\n氛围：\n常驻元素：\n可交互物：\n隐藏信息：' },
+        item:      { comment: '<物品>新物品', content: '外观：\n来源：\n效果：\n代价：\n当前持有者：' },
+        faction:   { comment: '<势力与组织>新组织', content: '定位：\n组织结构：\n核心成员：\n目标：\n与其他势力关系：' },
+        mechanic:  { comment: '<场景机制>新机制', content: '触发条件：\n执行流程：\n判定规则：\n反馈呈现：\n例外情况：' },
+        rule:      { comment: '<世界规则>新规则', content: '规则内容：\n适用范围：\n边界情况：\n违反后果：' },
+        lore:      { comment: '<叙事背景>新背景', content: '时间：\n地点：\n经过：\n对现在的影响：' },
+        ironrule:  { comment: '<核心铁则>新铁则', content: 'AI身份定位：\n绝对禁止：\n输出格式要求：' }
+      };
+      // 批量补触发词：给所有"触发类但没关键词"的条目一次性补上
+      function pvBatchDeriveKeys() {
+        var arr = pvEntriesArr();
+        var done = 0, failed = 0;
+        arr.forEach(function(e) {
+          if (!e || e.constant || isMvuSystemEntry(e.comment || '')) return;
+          if (Array.isArray(e.keys) && e.keys.length > 0) return;
+          var keys = [];
+          try { keys = _deriveEntryKeys(e.comment || '', getEntryTemplate(e.comment || ''), e.content || ''); } catch(_) {}
+          if (keys && keys.length) { e.keys = keys; done++; } else failed++;
+        });
+        return { done: done, failed: failed };
+      }
+      // 导出条目为 JSON 文件
+      function pvExportEntriesJSON(indices) {
+        var arr = pvEntriesArr();
+        var list = (indices && indices.length)
+          ? indices.map(function(i) { return arr[i]; }).filter(Boolean)
+          : arr.slice();
+        if (!list.length) { showToast('没有可导出的条目', 'warning'); return; }
+        var payload = { type: 'shizhi-worldbook-entries', version: 1, exportTime: new Date().toISOString(), entries: list };
+        try {
+          var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+          var url = URL.createObjectURL(blob);
+          var a = doc.createElement('a');
+          a.href = url;
+          a.download = (cardData.name || 'worldbook') + '-条目-' + list.length + '条.json';
+          doc.body.appendChild(a);
+          a.click();
+          setTimeout(function() { try { a.remove(); URL.revokeObjectURL(url); } catch(_) {} }, 1500);
+          showToast('⬇ 已导出 ' + list.length + ' 条条目', 'success');
+        } catch(e) {
+          showToast('导出失败：' + (e && e.message), 'error');
+        }
+      }
+      // 复制单条条目 JSON 到剪贴板
+      function pvCopyEntryJSON(idx) {
+        var arr = pvEntriesArr();
+        var e = arr[idx];
+        if (!e) return;
+        var txt = JSON.stringify(e, null, 2);
+        var ok = function() { showToast('⬇ 已复制该条目JSON到剪贴板', 'success'); };
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(txt).then(ok, function() { pvFallbackCopy(txt, ok); });
+          } else { pvFallbackCopy(txt, ok); }
+        } catch(_) { pvFallbackCopy(txt, ok); }
+      }
+      function pvFallbackCopy(txt, cb) {
+        try {
+          var ta = doc.createElement('textarea');
+          ta.value = txt;
+          ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+          doc.body.appendChild(ta);
+          ta.select();
+          doc.execCommand('copy');
+          ta.remove();
+          if (cb) cb();
+        } catch(e) { showToast('复制失败，请手动从导出文件里取', 'warning'); }
+      }
+      // 导入条目（粘贴 JSON 或选文件）
+      function showImportEntriesModal() {
+        var overlay = doc.createElement('div');
+        overlay.className = 'pv-modal-overlay';
+        var modal = doc.createElement('div');
+        modal.className = 'pv-modal';
+        modal.innerHTML =
+          '<div class="pv-modal-head"><span>⬆ 导入世界书条目</span><button class="icon-btn icon-btn-square" id="pvImpClose">' + svgIcon('close', 15) + '</button></div>' +
+          '<div class="pv-modal-body">' +
+            '<label class="pv-modal-label">方式一：选择 JSON 文件<input type="file" id="pvImpFile" accept=".json,application/json"></label>' +
+            '<label class="pv-modal-label">方式二：直接粘贴 JSON（支持单条对象 / 数组 / 本工具导出的 {"entries":[…]}）' +
+              '<textarea id="pvImpText" rows="9" placeholder=\'{"comment":"&lt;重要角色&gt;白娅","content":"身份：…","keys":["白娅"]}\'></textarea>' +
+            '</label>' +
+            '<div class="pv-modal-hint">同名条目会被覆盖（按条目名匹配），新条目追加到列表末尾。缺少的 ST 参数会按条目前缀自动补齐。</div>' +
+          '</div>' +
+          '<div class="pv-modal-foot"><button class="btn btn-ghost" id="pvImpCancel">取消</button><button class="btn btn-primary" id="pvImpOk">导入</button></div>';
+        overlay.appendChild(modal);
+        doc.body.appendChild(overlay);
+        var closeIt = function() { overlay.remove(); };
+        overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeIt(); });
+        modal.querySelector('#pvImpClose').addEventListener('click', closeIt);
+        modal.querySelector('#pvImpCancel').addEventListener('click', closeIt);
+        var fileEl = modal.querySelector('#pvImpFile');
+        var textEl = modal.querySelector('#pvImpText');
+        fileEl.addEventListener('change', function() {
+          var f = this.files && this.files[0];
+          if (!f) return;
+          var fr = new FileReader();
+          fr.onload = function() { textEl.value = String(fr.result || ''); showToast('已读取文件，点「导入」确认', 'info'); };
+          fr.readAsText(f);
+        });
+        modal.querySelector('#pvImpOk').addEventListener('click', function() {
+          var raw = String(textEl.value || '').trim();
+          if (!raw) { showToast('⚠️ 请先选择文件或粘贴 JSON', 'warning'); return; }
+          var data = null;
+          try { data = JSON.parse(raw); } catch(e) {
+            showToast('⚠️ JSON 解析失败：' + (e && e.message), 'error');
+            return;
+          }
+          var list = [];
+          if (Array.isArray(data)) list = data;
+          else if (data && Array.isArray(data.entries)) list = data.entries;
+          else if (data && typeof data === 'object') list = [data];
+          list = list.filter(function(x) { return x && typeof x === 'object'; });
+          if (!list.length) { showToast('⚠️ 没解析出任何条目', 'warning'); return; }
+          var arr = pvEntriesArr();
+          var added = 0, updated = 0;
+          list.forEach(function(src) {
+            var comment = String(src.comment || src.name || '').trim();
+            if (!comment) return;
+            var built = makeEntryWithTemplate(comment, src.content || '');
+            // 用导入数据覆盖参数
+            ['keys', 'secondary_keys', 'constant', 'selective', 'insertion_order', 'enabled', 'use_regex'].forEach(function(k) {
+              if (src[k] !== undefined) built[k] = src[k];
+            });
+            if (src.extensions && typeof src.extensions === 'object') built.extensions = Object.assign({}, built.extensions, src.extensions);
+            var nk = _opNormKey ? _opNormKey(comment) : comment.toLowerCase();
+            var hit = -1;
+            for (var i = 0; i < arr.length; i++) {
+              var ck = _opNormKey ? _opNormKey(arr[i].comment || '') : String(arr[i].comment || '').toLowerCase();
+              if (ck === nk) { hit = i; break; }
+            }
+            if (hit >= 0) { arr[hit] = built; updated++; } else { arr.push(built); added++; }
+          });
+          closeIt();
+          if (added || updated) pvAfterEntryChange('⬆ 导入完成：新增 ' + added + ' 条，覆盖 ' + updated + ' 条');
+          else showToast('⚠️ 没有可导入的条目（缺少 comment/name 字段）', 'warning');
+        });
+      }
+      // 多选批量操作
+      function pvBatchAction(action) {
+        var arr = pvEntriesArr();
+        var idxs = Object.keys(pvSelectedIdx).filter(function(k) { return pvSelectedIdx[k]; }).map(Number).filter(function(i) { return i >= 0 && i < arr.length; });
+        if (!idxs.length) { showToast('⚠️ 先勾选要处理的条目', 'warning'); return; }
+        if (action === 'const' || action === 'trig') {
+          var n = 0;
+          idxs.forEach(function(i) {
+            var e = arr[i];
+            if (!e || isMvuSystemEntry(e.comment || '')) return;
+            if (action === 'const') { e.constant = true; e.selective = false; }
+            else {
+              e.constant = false; e.selective = true;
+              if (!e.keys || !e.keys.length) { try { e.keys = _deriveEntryKeys(e.comment || '', getEntryTemplate(e.comment || ''), e.content || ''); } catch(_) {} }
+            }
+            n++;
+          });
+          pvSelectedIdx = {};
+          pvAfterEntryChange('✅ 已把 ' + n + ' 条设为' + (action === 'const' ? '常驻（蓝灯）' : '触发（绿灯）'));
+          return;
+        }
+        if (action === 'keys') {
+          var k = 0, f = 0;
+          idxs.forEach(function(i) {
+            var e = arr[i];
+            if (!e || e.constant) return;
+            var keys = [];
+            try { keys = _deriveEntryKeys(e.comment || '', getEntryTemplate(e.comment || ''), e.content || ''); } catch(_) {}
+            if (keys && keys.length) { e.keys = keys; k++; } else f++;
+          });
+          pvSelectedIdx = {};
+          pvAfterEntryChange('🔑 已给 ' + k + ' 条补触发词' + (f ? '（' + f + ' 条没提取出词，请手动填）' : ''));
+          return;
+        }
+        if (action === 'export') { pvExportEntriesJSON(idxs); return; }
+        if (action === 'delete') {
+          if (!window.confirm('确认删除选中的 ' + idxs.length + ' 条条目吗？\n\n（不可撤销，可用头像菜单→撤回AI修改恢复快照）')) return;
+          idxs.sort(function(a, b) { return b - a; }).forEach(function(i) { arr.splice(i, 1); });
+          pvSelectedIdx = {};
+          pvAfterEntryChange('🗑️ 已删除 ' + idxs.length + ' 条条目');
+          return;
+        }
+      }
+      // 开场白预览：渲染成聊天气泡
+      function showFirstMesPreview() {
+        var txt = String(cardData.first_mes || '');
+        if (!txt.trim()) { showToast('还没有开场白内容', 'warning'); return; }
+        var overlay = doc.createElement('div');
+        overlay.className = 'pv-modal-overlay';
+        var modal = doc.createElement('div');
+        modal.className = 'pv-modal';
+        modal.innerHTML =
+          '<div class="pv-modal-head"><span>' + svgIcon('film', 15) + ' 开场白预览 · ' + escHtml(cardData.name || '未命名') + '</span><button class="icon-btn icon-btn-square" id="fmClose">' + svgIcon('close', 15) + '</button></div>' +
+          '<div class="pv-modal-body">' +
+            '<div class="fm-meta">按 {{char}} 视角渲染（保留换行与段落）· 共 ' + txt.length + ' 字</div>' +
+            '<div class="fm-preview-wrap"><div class="fm-bubble">' + escHtml(txt) + '</div></div>' +
+          '</div>' +
+          '<div class="pv-modal-foot"><button class="btn btn-ghost" id="fmClose2">关闭</button></div>';
+        overlay.appendChild(modal);
+        doc.body.appendChild(overlay);
+        var closeIt = function() { overlay.remove(); };
+        overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeIt(); });
+        modal.querySelector('#fmClose').addEventListener('click', closeIt);
+        modal.querySelector('#fmClose2').addEventListener('click', closeIt);
+      }
+      // ===== 从酒馆世界书反向导入条目（继续改别人写好的卡）=====
+      async function importFromTavernWorldbook() {
+        var getCharWorldbookNames = _tavernFn('getCharWorldbookNames');
+        var getWorldbook = _tavernFn('getWorldbook');
+        if (!getWorldbook) { showToast('当前酒馆环境不支持读取世界书（缺少 getWorldbook API）', 'error'); return; }
+        var names = [];
+        try {
+          if (getCharWorldbookNames) {
+            var cur = getCharWorldbookNames('current');
+            if (cur && cur.primary) names.push(cur.primary);
+            if (cur && Array.isArray(cur.additional)) names = names.concat(cur.additional);
+          }
+        } catch(_e) {}
+        if (!names.length) { showToast('当前角色卡没有绑定世界书，或读取失败', 'warning'); return; }
+        if (!window.confirm('从以下世界书导入条目到写卡器：\n\n' + names.join('\n') + '\n\n同名条目会被覆盖，新条目追加到末尾。继续？')) return;
+        var posMap = { before_character_definition: 0, after_character_definition: 1, before_example_messages: 2, after_example_messages: 3, at_depth: 4 };
+        var arr = pvEntriesArr();
+        var added = 0, updated = 0;
+        for (var ni = 0; ni < names.length; ni++) {
+          var list = [];
+          try { list = await getWorldbook(names[ni]); } catch(_e2) { continue; }
+          if (!Array.isArray(list)) continue;
+          list.forEach(function(we) {
+            if (!we || typeof we !== 'object') return;
+            var comment = String(we.name || we.comment || '').trim();
+            if (!comment) return;
+            var strat = we.strategy || {};
+            var pos = we.position || {};
+            var isConst = (strat.type === 'constant') || we.constant === true;
+            var e = makeEntryWithTemplate(comment, we.content || '');
+            e.constant = isConst;
+            e.selective = !isConst;
+            if (Array.isArray(strat.keys) && strat.keys.length) e.keys = strat.keys.slice();
+            else if (Array.isArray(we.key) && we.key.length) e.keys = we.key.slice();
+            var secKeys = (strat.keys_secondary && Array.isArray(strat.keys_secondary.keys)) ? strat.keys_secondary.keys : (Array.isArray(we.keysecondary) ? we.keysecondary : null);
+            if (secKeys) e.secondary_keys = secKeys.slice();
+            var ord = (pos.order !== undefined) ? pos.order : ((we.insertion_order !== undefined) ? we.insertion_order : we.order);
+            if (typeof ord === 'number') { e.insertion_order = ord; e.extensions.order = ord; }
+            if (we.enabled !== undefined) e.enabled = we.enabled !== false;
+            var pType = pos.type !== undefined ? pos.type : we.position;
+            var pn = (typeof pType === 'number') ? pType : posMap[pType];
+            if (pn !== undefined && pn !== null && !isNaN(pn)) e.extensions.position = pn;
+            if (typeof pos.depth === 'number') e.extensions.depth = pos.depth;
+            if (pos.role !== undefined) e.extensions.role = (pos.role === 'user' || pos.role === 1) ? 1 : ((pos.role === 'assistant' || pos.role === 2) ? 2 : 0);
+            if (typeof we.probability === 'number') { e.extensions.probability = we.probability; e.extensions.useProbability = we.probability < 100; }
+            if (we.recursion && typeof we.recursion === 'object') {
+              e.extensions.prevent_recursion = !!we.recursion.prevent_incoming;
+              e.extensions.exclude_recursion = !!we.recursion.prevent_outgoing;
+              if (we.recursion.delay_until != null) e.extensions.delay_until_recursion = we.recursion.delay_until;
+            } else {
+              e.extensions.prevent_recursion = !!we.prevent_recursion;
+              e.extensions.exclude_recursion = !!we.exclude_recursion;
+            }
+            if (we.effect && typeof we.effect === 'object') {
+              if (we.effect.sticky != null) e.extensions.sticky = we.effect.sticky;
+              if (we.effect.cooldown != null) e.extensions.cooldown = we.effect.cooldown;
+              if (we.effect.delay != null) e.extensions.delay = we.effect.delay;
+            }
+            if (we.scan_depth != null) e.extensions.scan_depth = we.scan_depth;
+            var nk = _opNormKey ? _opNormKey(comment) : comment.toLowerCase();
+            var hit = -1;
+            for (var i = 0; i < arr.length; i++) {
+              var ck = _opNormKey ? _opNormKey(arr[i].comment || '') : String(arr[i].comment || '').toLowerCase();
+              if (ck === nk) { hit = i; break; }
+            }
+            if (hit >= 0) { arr[hit] = e; updated++; } else { arr.push(e); added++; }
+          });
+        }
+        if (added || updated) pvAfterEntryChange('⬆ 世界书导入完成：新增 ' + added + ' 条，覆盖 ' + updated + ' 条');
+        else showToast('没有从世界书里读到条目', 'warning');
+      }
+
+      // 预览面板：世界书条目手动编辑能力（拖拽排序 / 参数直改 / 复制 / 新建 / 高度）
+      // 🛡️ 内容保全护栏的结果提示文案（AI 想缩水时告诉用户发生了什么）
+      function buildGuardToast(log) {
+        if (!log) return '';
+        var merged = log._guardMerged || 0, warned = log._guardWarn || 0;
+        if (!merged && !warned) return '';
+        var lines = [];
+        (log._guardDetails || []).slice(0, 6).forEach(function(d) {
+          lines.push('· ' + d.comment + '：' + d.oldLen + '字 → ' + d.newLen + '字' + (d.warnOnly ? '' : '（已自动补回 ' + d.restored + ' 行原文）'));
+        });
+        if ((log._guardDetails || []).length > 6) lines.push('· …还有 ' + ((log._guardDetails.length) - 6) + ' 条');
+        var head = merged
+          ? ('🛡️ 已拦截 ' + merged + ' 条内容缩水（自动保留原内容，没有丢字）')
+          : ('⚠️ 检测到 ' + warned + ' 条内容缩水（当前模式：仅提醒，未自动补回）');
+        return head + '：\n' + lines.join('\n') + '\n💡 可在「工作区 → 内容保全」切换模式（自动合并 / 仅提醒 / 关闭）。';
+      }
+      function pvEntriesArr() {
+        if (!cardData.character_book) cardData.character_book = { entries: [] };
+        if (!Array.isArray(cardData.character_book.entries)) cardData.character_book.entries = [];
+        return cardData.character_book.entries;
+      }
+      function pvAfterEntryChange(msg) {
+        updateProgress();
+        renderPreview();
+        // 手动改条目同样会影响"体系完成度/下一步推荐"，这里一并刷新顶部阶段条与底部推荐按钮
+        try { updateQuickActions(); } catch(_q) {}
+        try { updateCtxBar(); } catch(_c) {}
+        try { renderModDash(); } catch(_d) {}
+        saveToStorage();
+        if (msg) showToast(msg, 'success');
+      }
+      // 拖拽排序：把 fromIdx 条目移动到 toIdx 之前/之后
+      function pvReorderEntry(fromIdx, toIdx, insertBefore) {
+        var arr = pvEntriesArr();
+        if (isNaN(fromIdx) || isNaN(toIdx)) return false;
+        if (fromIdx < 0 || fromIdx >= arr.length) return false;
+        if (toIdx < 0 || toIdx >= arr.length) return false;
+        if (fromIdx === toIdx) return false;
+        var item = arr.splice(fromIdx, 1)[0];
+        var target = (fromIdx < toIdx) ? (insertBefore ? toIdx - 1 : toIdx) : (insertBefore ? toIdx : toIdx + 1);
+        if (target < 0) target = 0;
+        if (target > arr.length) target = arr.length;
+        arr.splice(target, 0, item);
+        // 可选：同步写入优先级，让酒馆世界书里的顺序也跟着变（MVU条目保持原有优先级不动）
+        if (pvSyncOrder) {
+          var n = arr.length;
+          for (var k = 0; k < n; k++) {
+            if (!arr[k] || isMvuSystemEntry(arr[k].comment || '')) continue;
+            var newOrder = (n - k) * 10;
+            arr[k].insertion_order = newOrder;
+            if (!arr[k].extensions || typeof arr[k].extensions !== 'object') arr[k].extensions = {};
+            arr[k].extensions.order = newOrder;
+          }
+        }
+        return true;
+      }
+      // 参数直改：comment / position / depth / order / keys
+      function pvSetEntryField(idx, field, rawValue) {
+        var arr = pvEntriesArr();
+        var e = arr[idx];
+        if (!e) return false;
+        if (!e.extensions || typeof e.extensions !== 'object') e.extensions = {};
+        if (field === 'comment') {
+          var newName = String(rawValue || '').trim();
+          if (!newName) { showToast('⚠️ 条目名不能为空', 'warning'); return false; }
+          if (newName === (e.comment || '')) return false;
+          // 不允许和别的条目重名（否则 AI 的 upsert/delete 会认错条目）
+          var nk = _opNormKey ? _opNormKey(newName) : newName.toLowerCase();
+          for (var ci = 0; ci < arr.length; ci++) {
+            if (ci === idx) continue;
+            var ck = _opNormKey ? _opNormKey(arr[ci].comment || '') : String(arr[ci].comment || '').toLowerCase();
+            if (ck === nk) { showToast('⚠️ 已存在同名条目：' + (arr[ci].comment || newName), 'warning'); return false; }
+          }
+          // 迁移自定义高度记录
+          var oldName = String(e.comment || '');
+          if (pvEntryHeights[oldName] !== undefined) {
+            pvEntryHeights[newName] = pvEntryHeights[oldName];
+            delete pvEntryHeights[oldName];
+          }
+          e.comment = newName;
+          return true;
+        }
+        if (field === 'position') {
+          var pv = parseInt(rawValue, 10);
+          e.extensions.position = (isNaN(pv) ? 4 : Math.max(0, Math.min(4, pv)));
+          delete e.position;
+        } else if (field === 'depth') {
+          var dv = parseInt(rawValue, 10);
+          e.extensions.depth = (isNaN(dv) ? 0 : Math.max(0, Math.min(30, dv)));
+          delete e.depth;
+        } else if (field === 'order') {
+          var ov = parseInt(rawValue, 10);
+          if (isNaN(ov)) ov = 100;
+          ov = Math.max(0, Math.min(1000, ov));
+          e.insertion_order = ov;
+          e.extensions.order = ov;
+          delete e.order;
+        } else if (field === 'keys') {
+          e.keys = String(rawValue || '').split(/[,，、]/).map(function(s) { return s.trim(); }).filter(Boolean);
+        } else {
+          return false;
+        }
+        return true;
+      }
+      // 常驻/触发 一键切换（MVU体系条目不允许，避免破坏变量系统）
+      function pvToggleConstant(idx) {
+        var arr = pvEntriesArr();
+        var e = arr[idx];
+        if (!e) return false;
+        if (isMvuSystemEntry(e.comment || '')) {
+          showToast('⚠️ MVU体系条目的常驻/触发策略由变量系统决定，不能在这里切换', 'warning');
+          return false;
+        }
+        if (e.constant) {
+          e.constant = false;
+          e.selective = true;
+          if (!e.keys || e.keys.length === 0) {
+            try { e.keys = _deriveEntryKeys(e.comment || '', getEntryTemplate(e.comment || ''), e.content || ''); } catch(_) {}
+          }
+        } else {
+          e.constant = true;
+          e.selective = false;
+        }
+        return true;
+      }
+      // 一键补触发词（K0 的触发条目点一下就能补上）
+      function pvDeriveKeys(idx) {
+        var arr = pvEntriesArr();
+        var e = arr[idx];
+        if (!e) return false;
+        if (e.constant) { showToast('ℹ️ 常驻条目不需要触发词（蓝灯始终注入）', 'info'); return false; }
+        var keys = [];
+        try { keys = _deriveEntryKeys(e.comment || '', getEntryTemplate(e.comment || ''), e.content || ''); } catch(_) {}
+        if (!keys || !keys.length) { showToast('⚠️ 没能从条目名/内容里提取出触发词，请手动填写', 'warning'); return false; }
+        e.keys = keys;
+        return true;
+      }
+      // 复制条目（做变体时很省事）
+      function pvDuplicateEntry(idx) {
+        var arr = pvEntriesArr();
+        var src = arr[idx];
+        if (!src) return false;
+        var copy = JSON.parse(JSON.stringify(src));
+        copy.comment = (src.comment || '条目') + ' · 副本';
+        copy.extensions = copy.extensions || {};
+        arr.splice(idx + 1, 0, copy);
+        return true;
+      }
+      // 手动新建条目弹窗（tplKey 传入模板键时自动填骨架）
+      function showNewEntryModal(tplKey) {
+        var tpl = (tplKey && ENTRY_SKELETONS[tplKey]) ? ENTRY_SKELETONS[tplKey] : { comment: '', content: '' };
+        var overlay = doc.createElement('div');
+        overlay.className = 'pv-modal-overlay';
+        var modal = doc.createElement('div');
+        modal.className = 'pv-modal';
+        modal.innerHTML =
+          '<div class="pv-modal-head"><span>＋ 新建世界书条目</span><button class="icon-btn icon-btn-square" id="pvNewClose">' + svgIcon('close', 15) + '</button></div>' +
+          '<div class="pv-modal-body">' +
+            '<label class="pv-modal-label">条目名（建议带前缀，如 &lt;重要角色&gt;白娅）' +
+              '<input type="text" id="pvNewComment" placeholder="<重要角色>白娅" value="' + escAttr(tpl.comment) + '">' +
+            '</label>' +
+            '<label class="pv-modal-label">内容（触发词等参数会按前缀自动填好，保存后可在预览里直接改）' +
+              '<textarea id="pvNewContent" rows="10" placeholder="身份：…&#10;外貌：…&#10;性格：…">' + escHtml(tpl.content) + '</textarea>' +
+            '</label>' +
+            '<div class="pv-modal-hint">提示：前缀决定 ST 参数模板 —— &lt;核心铁则&gt;/&lt;基础公理&gt; 等为常驻(蓝灯)，&lt;重要角色&gt;/&lt;地点场景&gt; 等为触发(绿灯)并自动派生触发词。</div>' +
+          '</div>' +
+          '<div class="pv-modal-foot"><button class="btn btn-ghost" id="pvNewCancel">取消</button><button class="btn btn-primary" id="pvNewSave">创建条目</button></div>';
+        overlay.appendChild(modal);
+        doc.body.appendChild(overlay);
+        var closeIt = function() { overlay.remove(); };
+        overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeIt(); });
+        modal.querySelector('#pvNewClose').addEventListener('click', closeIt);
+        modal.querySelector('#pvNewCancel').addEventListener('click', closeIt);
+        var inputEl = modal.querySelector('#pvNewComment');
+        try { inputEl.focus(); } catch(_) {}
+        var doSave = function() {
+          var comment = String(inputEl.value || '').trim();
+          var content = String(modal.querySelector('#pvNewContent').value || '');
+          if (!comment) { showToast('⚠️ 请先填写条目名', 'warning'); return; }
+          var arr = pvEntriesArr();
+          var nk = _opNormKey ? _opNormKey(comment) : comment.toLowerCase();
+          var dupIdx = -1;
+          for (var di = 0; di < arr.length; di++) {
+            var ck = _opNormKey ? _opNormKey(arr[di].comment || '') : String(arr[di].comment || '').toLowerCase();
+            if (ck === nk) { dupIdx = di; break; }
+          }
+          if (dupIdx >= 0) {
+            if (!window.confirm('已存在同名条目「' + (arr[dupIdx].comment || comment) + '」\n\n确定要用新内容覆盖它吗？')) return;
+            var old = arr[dupIdx];
+            var rebuilt = makeEntryWithTemplate(comment, content);
+            arr[dupIdx] = Object.assign({}, old, rebuilt, { comment: comment });
+          } else {
+            arr.push(makeEntryWithTemplate(comment, content));
+          }
+          closeIt();
+          pvAfterEntryChange('✅ 已' + (dupIdx >= 0 ? '更新' : '创建') + '条目：' + comment);
+        };
+        modal.querySelector('#pvNewSave').addEventListener('click', doSave);
+        modal.addEventListener('keydown', function(ev) { if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) doSave(); });
+      }
+      // 条目搜索（纯前端显隐，不重建 DOM，输入不掉焦点）
+      function pvApplyEntryFilter(q) {
+        var body = doc.getElementById('previewBody');
+        if (!body) return;
+        var rows = body.querySelectorAll('.pv-entry[data-pv-search]');
+        var ql = String(q || '').trim().toLowerCase();
+        var shown = 0;
+        for (var i = 0; i < rows.length; i++) {
+          var hit = !ql || String(rows[i].getAttribute('data-pv-search') || '').indexOf(ql) >= 0;
+          rows[i].style.display = hit ? '' : 'none';
+          if (hit) shown++;
+        }
+        var cntEl = body.querySelector('#pvEntryCount');
+        if (cntEl) cntEl.textContent = ql ? (shown + '/' + rows.length + ' 条匹配') : (rows.length + ' 条');
+      }
+
       // 预览面板交互绑定：段落折叠 + 状态栏按钮
       function bindPreviewInteractions() {
         var body = doc.getElementById('previewBody');
@@ -14900,7 +15888,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         for (var k = 0; k < btns.length; k++) {
           btns[k].addEventListener('click', function() {
             var act = this.getAttribute('data-pv-action');
-            if (act === 'preview-statusbar') {
+            if (act === 'preview-firstmes') {
+              showFirstMesPreview();
+            } else if (act === 'preview-statusbar') {
               showMvuStatusBarPreview();
             } else if (act === 'gen-statusbar') {
               var input = doc.getElementById('chatInput');
@@ -14954,11 +15944,277 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             if (!window.confirm('确认删除该条目吗？\n\n条目：' + name + '\n（此操作无法撤回，误删可用头像菜单→撤回AI修改恢复快照）')) return;
             // 这里用 allEntries 里的真实引用直接 splice 掉
             allEntries.splice(idx, 1);
-            updateProgress();
-            renderPreview();
-            saveToStorage();
-            showToast('🗑️ 已删除条目：' + name, 'success');
+            pvAfterEntryChange('🗑️ 已删除条目：' + name);
           });
+        }
+
+        // ========== 🆕 世界书条目工具条：搜索 / 展开折叠 / 优先级同步 / 新建 ==========
+        var searchEl = body.querySelector('#pvEntrySearch');
+        if (searchEl) {
+          searchEl.value = pvEntryQuery || '';
+          searchEl.addEventListener('input', function() {
+            pvEntryQuery = this.value;
+            pvApplyEntryFilter(pvEntryQuery);
+          });
+          searchEl.addEventListener('click', function(e) { e.stopPropagation(); });
+          if (pvEntryQuery) pvApplyEntryFilter(pvEntryQuery);
+        }
+        var listBtns = body.querySelectorAll('[data-pv-list-action]');
+        for (var lbi = 0; lbi < listBtns.length; lbi++) {
+          listBtns[lbi].addEventListener('click', function(e) {
+            e.stopPropagation();
+            var act = this.getAttribute('data-pv-list-action');
+            if (act === 'expand' || act === 'collapse') {
+              var rows = body.querySelectorAll('.pv-entry[data-pv-entry-row]');
+              for (var ri = 0; ri < rows.length; ri++) rows[ri].open = (act === 'expand');
+              return;
+            }
+            if (act === 'sync-order') {
+              pvSyncOrder = !pvSyncOrder;
+              saveToStorage();
+              renderPreview();
+              showToast(pvSyncOrder
+                ? '↕ 已开启「优先级同步」：拖动排序时会同时改写条目优先级(order)'
+                : '↕ 已关闭「优先级同步」：拖动只调整顺序，不改优先级', 'info');
+              return;
+            }
+            if (act === 'multi') {
+              pvMultiSelect = !pvMultiSelect;
+              pvSelectedIdx = {};
+              renderPreview();
+              showToast(pvMultiSelect ? '☑ 多选模式已开启：勾选条目后可批量操作' : '☑ 多选模式已关闭', 'info');
+              return;
+            }
+            if (act === 'batch-keys') {
+              var _bk = pvBatchDeriveKeys();
+              if (_bk.done > 0) pvAfterEntryChange('🔑 已给 ' + _bk.done + ' 条补上触发词' + (_bk.failed ? '（' + _bk.failed + ' 条没提取出词）' : ''));
+              else showToast(_bk.failed ? '⚠️ 有 ' + _bk.failed + ' 条没能提取出触发词，请手动填写' : '所有触发条目都已有触发词，无需补', 'info');
+              return;
+            }
+            if (act === 'new') { showNewEntryModal(); return; }
+            if (act === 'import') { showImportEntriesModal(); return; }
+            if (act === 'export') { pvExportEntriesJSON(null); return; }
+          });
+        }
+        // 模板下拉
+        var tplSel = body.querySelector('#pvTplSelect');
+        if (tplSel) {
+          tplSel.addEventListener('click', function(e) { e.stopPropagation(); });
+          tplSel.addEventListener('change', function() {
+            var v = this.value;
+            this.value = '';
+            if (v) showNewEntryModal(v);
+          });
+        }
+        // 多选：单条勾选
+        var checks = body.querySelectorAll('[data-pv-check]');
+        for (var cbi = 0; cbi < checks.length; cbi++) {
+          checks[cbi].addEventListener('click', function(e) {
+            e.stopPropagation();
+            var i = parseInt(this.getAttribute('data-pv-check'), 10);
+            if (isNaN(i)) return;
+            if (this.checked) pvSelectedIdx[i] = true; else delete pvSelectedIdx[i];
+            var row = this.closest('.pv-entry');
+            if (row) row.classList.toggle('is-checked', !!this.checked);
+            var sc = body.querySelector('#pvSelCount');
+            if (sc) sc.textContent = '已选 ' + Object.keys(pvSelectedIdx).length + ' 条';
+          });
+        }
+        // 多选：全选
+        var checkAll = body.querySelector('#pvCheckAll');
+        if (checkAll) {
+          checkAll.addEventListener('click', function(e) { e.stopPropagation(); });
+          checkAll.addEventListener('change', function() {
+            var on = this.checked;
+            pvSelectedIdx = {};
+            var rows = body.querySelectorAll('.pv-entry[data-pv-entry-row]');
+            for (var ri2 = 0; ri2 < rows.length; ri2++) {
+              var ii = parseInt(rows[ri2].getAttribute('data-pv-entry-row'), 10);
+              if (isNaN(ii)) continue;
+              if (rows[ri2].style.display === 'none') continue;   // 只全选当前筛选出来的
+              if (on) pvSelectedIdx[ii] = true;
+              rows[ri2].classList.toggle('is-checked', on);
+              var cb = rows[ri2].querySelector('[data-pv-check]');
+              if (cb) cb.checked = on;
+            }
+            var sc2 = body.querySelector('#pvSelCount');
+            if (sc2) sc2.textContent = '已选 ' + Object.keys(pvSelectedIdx).length + ' 条';
+          });
+        }
+        // 多选：批量操作按钮
+        var batchBtns = body.querySelectorAll('[data-pv-batch]');
+        for (var bbi = 0; bbi < batchBtns.length; bbi++) {
+          batchBtns[bbi].addEventListener('click', function(e) {
+            e.stopPropagation();
+            pvBatchAction(this.getAttribute('data-pv-batch'));
+          });
+        }
+
+        // ========== 🆕 拖拽排序（拖动左侧 ⠿ 把手）==========
+        var dragFrom = -1;
+        var dragRows = body.querySelectorAll('.pv-entry[data-pv-entry-row]');
+        var clearDropMarks = function() {
+          var all = body.querySelectorAll('.pv-entry');
+          for (var ci = 0; ci < all.length; ci++) all[ci].classList.remove('pv-drop-top', 'pv-drop-bottom');
+        };
+        for (var dri = 0; dri < dragRows.length; dri++) {
+          (function(row) {
+            var handle = row.querySelector('.pv-entry-drag');
+            if (!handle) return;
+            // 点把手不要触发展开/折叠
+            handle.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); });
+            handle.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+            handle.addEventListener('dragstart', function(e) {
+              dragFrom = parseInt(row.getAttribute('data-pv-entry-row'), 10);
+              row.classList.add('pv-dragging');
+              try {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', String(dragFrom));
+              } catch(_) {}
+            });
+            handle.addEventListener('dragend', function() {
+              row.classList.remove('pv-dragging');
+              clearDropMarks();
+              dragFrom = -1;
+            });
+            row.addEventListener('dragover', function(e) {
+              if (dragFrom < 0) return;
+              e.preventDefault();
+              try { e.dataTransfer.dropEffect = 'move'; } catch(_) {}
+              var rect = row.getBoundingClientRect();
+              var isTop = (e.clientY - rect.top) < rect.height / 2;
+              row.classList.toggle('pv-drop-top', isTop);
+              row.classList.toggle('pv-drop-bottom', !isTop);
+            });
+            row.addEventListener('dragleave', function() {
+              row.classList.remove('pv-drop-top', 'pv-drop-bottom');
+            });
+            row.addEventListener('drop', function(e) {
+              if (dragFrom < 0) return;
+              e.preventDefault();
+              var toIdx = parseInt(row.getAttribute('data-pv-entry-row'), 10);
+              var rect = row.getBoundingClientRect();
+              var isTop = (e.clientY - rect.top) < rect.height / 2;
+              clearDropMarks();
+              var moved = pvReorderEntry(dragFrom, toIdx, isTop);
+              dragFrom = -1;
+              if (moved) pvAfterEntryChange('↕ 已调整条目顺序');
+            });
+          })(dragRows[dri]);
+        }
+
+        // ========== 🆕 参数直改（位置/深度/优先级/关键词）==========
+        var pvFields = body.querySelectorAll('[data-pv-field]');
+        for (var pfi = 0; pfi < pvFields.length; pfi++) {
+          pvFields[pfi].addEventListener('click', function(e) { e.stopPropagation(); });
+          pvFields[pfi].addEventListener('change', function() {
+            var idx = parseInt(this.getAttribute('data-pv-idx'), 10);
+            var field = this.getAttribute('data-pv-field');
+            if (isNaN(idx)) return;
+            if (pvSetEntryField(idx, field, this.value)) pvAfterEntryChange('✅ 已更新条目参数');
+          });
+        }
+
+        // ========== 🆕 常驻/触发 一键切换 ==========
+        var pvToggles = body.querySelectorAll('[data-pv-toggle-const]');
+        for (var pti = 0; pti < pvToggles.length; pti++) {
+          pvToggles[pti].addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            var idx = parseInt(this.getAttribute('data-pv-toggle-const'), 10);
+            if (isNaN(idx)) return;
+            if (pvToggleConstant(idx)) pvAfterEntryChange('✅ 已切换为' + (pvEntriesArr()[idx].constant ? '常驻（蓝灯）' : '触发（绿灯）'));
+          });
+        }
+
+        // ========== 🆕 触发词标签：点一下自动补全 / 重新派生 ==========
+        var pvKeyTags = body.querySelectorAll('[data-pv-derive-keys]');
+        for (var pki = 0; pki < pvKeyTags.length; pki++) {
+          pvKeyTags[pki].addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            var idx = parseInt(this.getAttribute('data-pv-derive-keys'), 10);
+            if (isNaN(idx)) return;
+            if (pvDeriveKeys(idx)) {
+              var arr = pvEntriesArr();
+              pvAfterEntryChange('🔑 已补触发词：' + ((arr[idx] && arr[idx].keys) || []).join('、'));
+            }
+          });
+        }
+
+        // ========== 🆕 复制条目 / 复制条目JSON ==========
+        var pvDups = body.querySelectorAll('[data-pv-entry-dup]');
+        for (var pdui = 0; pdui < pvDups.length; pdui++) {
+          pvDups[pdui].addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            var idx = parseInt(this.getAttribute('data-pv-entry-dup'), 10);
+            if (isNaN(idx)) return;
+            if (pvDuplicateEntry(idx)) pvAfterEntryChange('⧉ 已复制条目（记得改条目名和内容）');
+          });
+        }
+        var pvCopies = body.querySelectorAll('[data-pv-entry-copy]');
+        for (var pci = 0; pci < pvCopies.length; pci++) {
+          pvCopies[pci].addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            var idx = parseInt(this.getAttribute('data-pv-entry-copy'), 10);
+            if (!isNaN(idx)) pvCopyEntryJSON(idx);
+          });
+        }
+
+        // ========== 🆕 条目高度拖拽调节（拖动底部把手；双击恢复自适应）==========
+        var pvResizers = body.querySelectorAll('[data-pv-entry-resize]');
+        for (var pri = 0; pri < pvResizers.length; pri++) {
+          (function(handle) {
+            var idx = parseInt(handle.getAttribute('data-pv-entry-resize'), 10);
+            var row = handle.closest('.pv-entry');
+            var contentEl = row ? row.querySelector('.pv-entry-content') : null;
+            if (!contentEl) return;
+            var startY = 0, startH = 0, dragging = false;
+            var onMove = function(ev) {
+              if (!dragging) return;
+              var delta = ev.clientY - startY;
+              var h = Math.max(80, Math.min(2400, Math.round(startH + delta)));
+              contentEl.style.maxHeight = h + 'px';
+              contentEl.style.overflow = 'auto';
+            };
+            var onUp = function() {
+              if (!dragging) return;
+              dragging = false;
+              doc.removeEventListener('mousemove', onMove);
+              doc.removeEventListener('mouseup', onUp);
+              var arr = pvEntriesArr();
+              var e = arr[idx];
+              if (!e) return;
+              var h = parseInt(contentEl.style.maxHeight, 10);
+              if (!isNaN(h) && h > 0) {
+                pvEntryHeights[String(e.comment || ('条目' + idx))] = h;
+                saveToStorage();
+              }
+            };
+            handle.addEventListener('mousedown', function(ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              dragging = true;
+              startY = ev.clientY;
+              startH = contentEl.getBoundingClientRect().height;
+              doc.addEventListener('mousemove', onMove);
+              doc.addEventListener('mouseup', onUp);
+            });
+            handle.addEventListener('click', function(ev) { ev.stopPropagation(); });
+            handle.addEventListener('dblclick', function(ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              var arr = pvEntriesArr();
+              var e = arr[idx];
+              if (e) delete pvEntryHeights[String(e.comment || ('条目' + idx))];
+              contentEl.style.maxHeight = '';
+              contentEl.style.overflow = '';
+              saveToStorage();
+              showToast('↕ 已恢复自适应高度', 'info');
+            });
+          })(pvResizers[pri]);
         }
       }
 
@@ -15042,6 +16298,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             overlay.remove();
             updateProgress();
             renderPreview();
+            try { updateQuickActions(); } catch(_q) {}
+            try { updateCtxBar(); } catch(_c) {}
             saveToStorage();
             showToast('🗑️ 已删除：' + what, 'success');
           };
@@ -15071,6 +16329,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           overlay.remove();
           updateProgress();
           renderPreview();
+          try { updateQuickActions(); } catch(_q) {}
+          try { updateCtxBar(); } catch(_c) {}
           saveToStorage();
           showToast('✅ 已保存修改', 'success');
         };
