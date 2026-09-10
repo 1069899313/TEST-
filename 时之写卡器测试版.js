@@ -1,6 +1,6 @@
 (function() {
 /* ============================================================================
- * 时之写卡器 · Tavern Helper 脚本（整理版2026.9.9 22:56）
+ * 时之写卡器 · Tavern Helper 脚本（整理版2026.9.10 08:21）
  * ----------------------------------------------------------------------------
  * 项目类型：后台脚本（Tavern Helper Script · 相当于模板里的 index.ts）
  * 运行形式：单文件 JS，导入到酒馆脚本库，点击脚本按钮打开写卡器
@@ -396,6 +396,20 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 .pv-modal-label input:focus,.pv-modal-label textarea:focus{border-color:var(--accent-border-strong);box-shadow:0 0 0 3px var(--accent-soft);background:var(--surface)}
 .pv-modal-hint{font-size:.74em;color:var(--muted);line-height:1.6;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:var(--radius-sm);padding:8px 10px}
 .pv-modal-foot{padding:11px 18px;border-top:1px solid var(--line-soft);display:flex;justify-content:flex-end;gap:8px}
+/* ===== 历史版本面板 ===== */
+.pv-modal-wide{max-width:760px}
+.snap-list{display:flex;flex-direction:column;gap:8px}
+.snap-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 11px;background:var(--surface-soft);border:1px solid var(--line-soft);border-left:3px solid var(--accent-soft);border-radius:var(--radius-sm);transition:all .18s}
+.snap-row:hover{background:var(--surface);border-left-color:var(--accent);box-shadow:0 2px 10px rgba(15,23,42,.05)}
+.snap-row-main{flex:1;min-width:180px}
+.snap-row-title{font-size:.84em;font-weight:600;color:var(--accent-deep);margin-bottom:3px;word-break:break-word}
+.snap-row-meta{font-size:.72em;color:var(--muted);line-height:1.5}
+.snap-row-actions{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.snap-row-actions .pv-mini-btn{font-size:.72em;padding:5px 10px}
+.snap-diff{font-size:.8em;line-height:1.8;color:var(--ink-soft)}
+.snap-diff-line{padding:5px 0;border-bottom:1px dashed var(--line-soft);word-break:break-word}
+.snap-diff-line:last-child{border-bottom:none}
+.snap-diff-line b{color:var(--accent-deep)}
 /* ===== 内容保全模式切换（工作区下拉） ===== */
 .ws-guard-row{display:flex;gap:6px;padding:4px 10px 2px 10px}
 .ws-guard-btn{flex:1;font-family:inherit;font-size:.74em;padding:6px 4px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer;transition:all .18s}
@@ -2100,7 +2114,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '=== ST权重分层8体系（核心架构，必须严格遵循） ===\n\n' +
     '⚠️【字数上限的适用范围 · 必须看清】下面各体系写的"字数：≤N字"只约束【新建条目】的初始篇幅。\n' +
     '   修改已有条目时**不受任何字数上限约束**：原条目多少字，改完就至少多少字（只增不减），禁止拿字数上限当缩水借口。\n\n' +
-    '**第一部分：3阶常驻体系（总Token≤500，永不截断）**\n\n' +
+    '**第一部分：3阶常驻体系（每轮都注入，越精炼越好；具体额度按世界复杂度自定，不设硬性上限）**\n\n' +
     '### 1. 基础公理阶\n' +
     '- ST配置：constant=true, position=0, insertion_order=200-250, prevent_recursion=true\n' +
     '- 内容：世界元数据、核心世界观公理、力量体系底层骨架（仅放永不改变的内容）\n' +
@@ -2614,7 +2628,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '**全局预算与激活控制（用户侧设置，生成角色卡时需了解）**：\n' +
     '- Budget Cap（预算上限）：世界书总token上限，防止注入过多内容撑爆上下文\n' +
     '  - 通常设为1024或2048，取决于模型上下文长度\n' +
-    '  - 角色卡设计原则：常驻条目总token≤500，确保有足够预算给触发条目\n' +
+    '  - 角色卡设计原则：常驻条目尽量精炼（额度按世界复杂度自定，不设硬性上限），给触发条目留预算；但精炼 ≠ 压缩已有内容\n' +
     '- Min Activations（最小激活数）：确保至少激活N条条目的全局设置\n' +
     '  - 设为非零值时，即使scan_depth内没找到关键词，也会向后搜索直到激活指定数量的条目\n' +
     '  - 用途：确保关键信息不被遗漏（如每次生成都注入一些世界背景）\n' +
@@ -3220,7 +3234,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '- 叙事类条目用probability降低触发频率，节省token\n' +
     '- 实体类条目开启prevent_recursion，防止递归风暴\n' +
     '- 场景类条目设置cooldown，避免重复刷屏\n' +
-    '- 控制常驻条目（constant=true）数量，总token≤500\n' +
+    '- 常驻条目（constant=true）数量与篇幅按世界复杂度自行取舍，不设硬性Token上限；不要为了"省Token"去压缩用户已写好的内容\n' +
     '- 条目内容保持精炼，单条100-400字，信息密度高\n\n' +
     '**⚠️ 常见错误与避坑指南**：\n' +
     '1. 内容不自包含：content中写"如前所述""见上文"→ AI完全看不到上下文，必须写完整信息\n' +
@@ -3469,7 +3483,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '- [ ] substituteRegex范围：在0-2范围内\n' +
     '- [ ] runOnEdit：状态栏类脚本建议开启\n\n' +
     '**运行效果检查（3项）：**\n' +
-    '- [ ] 常驻Token总量：≤500\n' +
+    '- [ ] 常驻Token总量：够用即可（不设硬性上限，按世界复杂度判断）\n' +
     '- [ ] 递归安全：实体类条目开启prevent_recursion\n' +
     '- [ ] 冷却防抖：场景类条目开启cooldown\n\n' +
     '**附加检查（6项，不计入核心）：**\n' +
@@ -9028,6 +9042,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               '<div class="preview-panel">' +
                 '<div class="preview-header">' +
                   '<span class="pv-title">' + svgIcon('clipboard', 15) + ' 预览</span>' +
+                  '<button class="pv-export" id="snapBtn" title="历史版本：查看/恢复每次AI修改前的完整状态" aria-label="历史版本">' + svgIcon('undo', 15) + '</button>' +
                   '<button class="pv-export" id="exportLogBtn" title="导出聊天记录和后台记录" aria-label="导出聊天记录">' + svgIcon('fileExport', 15) + '</button>' +
                 '</div>' +
                 '<div class="preview-body" id="previewBody"></div>' +
@@ -9088,6 +9103,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         // 工作台
         items += '<div class="ws-dropdown-section">工作台</div>';
         items += '<div class="ws-dropdown-item" data-action="open-workspace">' + svgIcon('folder', 15) + ' 打开工作台 <span class="ws-item-badge">Tab</span></div>';
+        items += '<div class="ws-dropdown-item" data-action="snapshots" title="查看/恢复每次AI修改前的完整状态（世界书/描述/开场白/MVU/正则/脚本）">' + svgIcon('undo', 15) + ' 历史版本</div>';
         // ===== 字体大小：可展开的控件（工作区下拉中）=====
         items += '<div class="ws-font-expand collapsed" id="wsFontExpand">' +
                     '<div class="ws-font-header" id="wsFontHeader">' + svgIcon('eye', 14) + ' 字体大小 <span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px"><span class="ws-font-arrow">▾</span></span></div>' +
@@ -9195,6 +9211,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             var action = this.getAttribute('data-action');
             dropdown.classList.remove('show');
             if (action === 'open-workspace') openWorkspacePanel();
+            else if (action === 'snapshots') showSnapshotHistory();
             else if (action === 'switch-tab') switchTab(this.getAttribute('data-tab'));
             else if (action === 'export-log') {
               var btn = doc.getElementById('exportLogBtn');
@@ -9934,6 +9951,10 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (exportLogBtn) {
           exportLogBtn.addEventListener('click', exportChatLogs);
         }
+        var snapBtn = doc.getElementById('snapBtn');
+        if (snapBtn) {
+          snapBtn.addEventListener('click', showSnapshotHistory);
+        }
         var qBtns = doc.querySelectorAll('.quick-btn');
         for (var i = 0; i < qBtns.length; i++) {
           qBtns[i].addEventListener('click', function() {
@@ -10213,6 +10234,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         try {
           (cardData.character_book.entries || []).forEach(function(_e) { healEntryStrategy(_e); });
         } catch(_healImpErr) {}
+        // 导入的是另一张卡，旧卡的历史快照没有意义了，清掉避免误恢复到旧卡状态
+        try { cardDataSnapshots = { card: {}, mvu: {} }; snapshotMeta = { card: {}, mvu: {} }; } catch(_snapImp) {}
         progress = calcProgress();
         // ========== Tab 隔离：导入角色卡时重置两边聊天记录（回到全新起始状态） ==========
         chatSessions.card.messages = [];
@@ -10413,9 +10436,20 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             pvEntryHeights: pvEntryHeights,
             pvSyncOrder: pvSyncOrder,
             contentGuardMode: contentGuardMode,
+            // 历史版本快照（只存最近 SNAPSHOT_PERSIST 份/每个Tab，避免存档爆掉）
+            snapshots: _snapshotsForStorage(),
+            snapshotMeta: snapshotMeta,
             timestamp: Date.now()
           };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          // 存档过大时先放弃快照持久化（快照只是"后悔药"，角色卡本体必须能存下去）
+          var _stateJson = JSON.stringify(state);
+          if (_stateJson.length > 3.5 * 1024 * 1024) {
+            console.warn('[storage] 存档过大（' + Math.round(_stateJson.length / 1024) + 'KB），本轮跳过历史快照持久化');
+            state.snapshots = { card: {}, mvu: {} };
+            state.snapshotMeta = { card: {}, mvu: {} };
+            _stateJson = JSON.stringify(state);
+          }
+          localStorage.setItem(STORAGE_KEY, _stateJson);
         } catch(e) {
           if (e.name === 'QuotaExceededError') {
             console.warn('[storage] Quota exceeded, 尝试精简冗余字段后重试...');
@@ -10432,6 +10466,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                 statusBarMode: statusBarMode,
                 statusBarCurrentStep: statusBarCurrentStep,
                 fontScale: typeof _appFontScale === 'number' ? _appFontScale : 1,
+                // 注意：这里故意不带 snapshots —— 存档空间不足时优先保证角色卡本身能存下去
                 timestamp: Date.now()
               };
               localStorage.setItem(STORAGE_KEY, JSON.stringify(slimState));
@@ -10535,6 +10570,15 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             if (state.pvEntryHeights && typeof state.pvEntryHeights === 'object') pvEntryHeights = state.pvEntryHeights;
             if (typeof state.pvSyncOrder === 'boolean') pvSyncOrder = state.pvSyncOrder;
             if (state.contentGuardMode === 'merge' || state.contentGuardMode === 'warn' || state.contentGuardMode === 'off') contentGuardMode = state.contentGuardMode;
+            // 历史版本快照
+            if (state.snapshots && typeof state.snapshots === 'object') {
+              cardDataSnapshots.card = state.snapshots.card || {};
+              cardDataSnapshots.mvu = state.snapshots.mvu || {};
+            }
+            if (state.snapshotMeta && typeof state.snapshotMeta === 'object') {
+              snapshotMeta.card = state.snapshotMeta.card || {};
+              snapshotMeta.mvu = state.snapshotMeta.mvu || {};
+            }
 
             // 状态栏：根据恢复的当前Tab决定加载哪一份
             if (activeTab === 'mvu') {
@@ -11251,11 +11295,33 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       // 每个Tab维护独立的快照表：{ card: {msgIndex: cardDataClone}, mvu: {...} }
       // 在每条AI消息应用修改前保存快照，撤回时回滚cardData + 截断消息
       var cardDataSnapshots = { card: {}, mvu: {} };
+      // 快照元信息（时间 + 触发这次修改的用户消息），供「历史版本」面板显示
+      var snapshotMeta = { card: {}, mvu: {} };
+      var SNAPSHOT_KEEP = 12;      // 内存里最多保留多少个（每个Tab）
+      var SNAPSHOT_PERSIST = 6;    // 存档里最多持久化多少个（每个Tab）
       function _snapTabKey() { return (activeTab === 'mvu') ? 'mvu' : 'card'; }
+      function _trimSnapshots(tab) {
+        try {
+          var keys = Object.keys(cardDataSnapshots[tab]).map(Number).filter(function(n) { return !isNaN(n); }).sort(function(a, b) { return a - b; });
+          while (keys.length > SNAPSHOT_KEEP) {
+            var k = keys.shift();
+            delete cardDataSnapshots[tab][k];
+            delete snapshotMeta[tab][k];
+          }
+        } catch(_) {}
+      }
       function saveCardDataSnapshot(aiMsgIndex) {
         try {
           var clone = JSON.parse(JSON.stringify(cardData));
           cardDataSnapshots[_snapTabKey()][aiMsgIndex] = clone;
+          // 记录元信息：这条快照对应"哪条用户指令之前的状态"
+          var msgs = getCurrentMessages();
+          var label = '';
+          for (var i = aiMsgIndex - 1; i >= 0; i--) {
+            if (msgs[i] && msgs[i].role === 'user') { label = String(msgs[i].content || '').replace(/\s+/g, ' ').slice(0, 60); break; }
+          }
+          snapshotMeta[_snapTabKey()][aiMsgIndex] = { time: Date.now(), label: label };
+          _trimSnapshots(_snapTabKey());
         } catch(e) { console.warn('[snapshot] save failed:', e && e.message); }
       }
       function restoreCardDataSnapshot(aiMsgIndex) {
@@ -11273,8 +11339,198 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         var tab = _snapTabKey();
         var snaps = cardDataSnapshots[tab];
         for (var k in snaps) {
-          if (snaps.hasOwnProperty(k) && Number(k) > msgIndex) delete snaps[k];
+          if (snaps.hasOwnProperty(k) && Number(k) > msgIndex) {
+            delete snaps[k];
+            if (snapshotMeta[tab]) delete snapshotMeta[tab][k];
+          }
         }
+      }
+      // ===== 快照持久化（默认只存最近 6 个/每个Tab，避免存档爆掉）=====
+      function _snapshotsForStorage() {
+        var out = { card: {}, mvu: {} };
+        try {
+          ['card', 'mvu'].forEach(function(tab) {
+            var keys = Object.keys(cardDataSnapshots[tab] || {}).map(Number).filter(function(n) { return !isNaN(n); }).sort(function(a, b) { return a - b; });
+            keys.slice(-SNAPSHOT_PERSIST).forEach(function(k) {
+              try {
+                var slim = JSON.parse(JSON.stringify(cardDataSnapshots[tab][k]));
+                // 头像字段可能是超长 dataURL，快照里去掉，省空间
+                if (slim && typeof slim.avatar === 'string' && slim.avatar.length > 4096) slim.avatar = '';
+                out[tab][k] = slim;
+              } catch(_) {}
+            });
+          });
+        } catch(_) {}
+        return out;
+      }
+      // ===== 「历史版本」面板：可视化每次对话前后的完整状态，可对比/恢复 =====
+      function showSnapshotHistory() {
+        var tab = _snapTabKey();
+        var snaps = cardDataSnapshots[tab] || {};
+        var metas = snapshotMeta[tab] || {};
+        var keys = Object.keys(snaps).map(Number).filter(function(n) { return !isNaN(n); }).sort(function(a, b) { return b - a; });  // 新→旧
+        var msgs = getCurrentMessages();
+        var rows = '';
+        if (!keys.length) {
+          rows = '<div class="pv-empty">还没有历史版本。每次AI修改前写卡器都会自动存一份完整快照（世界书/描述/开场白/MVU/正则/脚本全都在内），聊过一轮后这里就有记录了。</div>';
+        } else {
+          keys.forEach(function(k) {
+            var snap = snaps[k];
+            var meta = metas[k] || {};
+            var timeStr = meta.time ? new Date(meta.time).toLocaleString('zh-CN', { hour12: false }) : '（时间未知）';
+            var entriesN = ((snap.character_book && snap.character_book.entries) || []).length;
+            var mvuN = ((snap.character_book && snap.character_book.entries) || []).filter(function(e) { return isMvuSystemEntry(e.comment || ''); }).length;
+            var rxN = (((snap.extensions || {}).regex_scripts) || []).length;
+            var scN = (((snap.extensions || {}).tavern_helper || {}).scripts || []).length;
+            var descLen = String(snap.description || '').length;
+            var fmLen = String(snap.first_mes || '').length;
+            var label = meta.label ? ('「' + escHtml(meta.label) + '」之前') : '某次修改之前';
+            var isCurrentTurn = (k >= msgs.length);
+            rows += '<div class="snap-row">'
+              + '<div class="snap-row-main">'
+              +   '<div class="snap-row-title">' + label + (isCurrentTurn ? ' <span class="pv-tag off">已过期</span>' : '') + '</div>'
+              +   '<div class="snap-row-meta">' + timeStr + ' · 条目 ' + entriesN + ' 条（MVU ' + mvuN + '）· 描述 ' + descLen + '字 · 开场白 ' + fmLen + '字 · 正则 ' + rxN + ' · 脚本 ' + scN + '</div>'
+              + '</div>'
+              + '<div class="snap-row-actions">'
+              +   '<button type="button" class="pv-mini-btn" data-snap-diff="' + k + '">查看差异</button>'
+              +   '<button type="button" class="pv-mini-btn" data-snap-restore="' + k + '">只恢复内容</button>'
+              +   '<button type="button" class="pv-mini-btn" data-snap-restore-cut="' + k + '">恢复并截断对话</button>'
+              + '</div></div>';
+          });
+        }
+        var overlay = doc.createElement('div');
+        overlay.className = 'pv-modal-overlay';
+        var modal = doc.createElement('div');
+        modal.className = 'pv-modal pv-modal-wide';
+        modal.innerHTML =
+          '<div class="pv-modal-head"><span>🕘 历史版本（' + (tab === 'mvu' ? 'MVU Tab' : '角色卡 Tab') + '）</span><button class="icon-btn icon-btn-square" id="snapClose">' + svgIcon('close', 15) + '</button></div>' +
+          '<div class="pv-modal-body">' +
+            '<div class="pv-modal-hint">每轮 AI 修改前自动存一份完整快照（世界书条目 / 描述 / 开场白 / MVU 条目 / 正则 / 脚本 全都在内）。<br>快照随存档保留最近 ' + SNAPSHOT_PERSIST + ' 份（内存中最多 ' + SNAPSHOT_KEEP + ' 份）；关闭写卡器后仍可恢复。</div>' +
+            '<div class="snap-list">' + rows + '</div>' +
+          '</div>' +
+          '<div class="pv-modal-foot"><button class="btn btn-ghost" id="snapClear">清空历史快照</button><button class="btn btn-ghost" id="snapExport">导出全部快照</button><button class="btn btn-ghost" id="snapClose2">关闭</button></div>';
+        overlay.appendChild(modal);
+        doc.body.appendChild(overlay);
+        var closeIt = function() { overlay.remove(); };
+        overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeIt(); });
+        modal.querySelector('#snapClose').addEventListener('click', closeIt);
+        modal.querySelector('#snapClose2').addEventListener('click', closeIt);
+        modal.querySelector('#snapClear').addEventListener('click', function() {
+          if (!keys.length) { showToast('没有可清空的快照', 'info'); return; }
+          if (!window.confirm('清空全部历史快照吗？\n\n只删除"后悔药"，当前角色卡内容不受影响；清空后无法再回到之前的版本。')) return;
+          cardDataSnapshots[tab] = {};
+          snapshotMeta[tab] = {};
+          saveToStorage();
+          closeIt();
+          showToast('🧹 已清空历史快照', 'success');
+        });
+        modal.querySelector('#snapExport').addEventListener('click', function() {
+          try {
+            var payload = { type: 'shizhi-snapshots', version: 1, exportTime: new Date().toISOString(), tab: tab, snapshots: cardDataSnapshots[tab], meta: snapshotMeta[tab] };
+            var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = doc.createElement('a');
+            a.href = url;
+            a.download = (cardData.name || 'card') + '-历史快照.json';
+            doc.body.appendChild(a);
+            a.click();
+            setTimeout(function() { try { a.remove(); URL.revokeObjectURL(url); } catch(_) {} }, 1500);
+            showToast('⬇ 已导出 ' + keys.length + ' 份快照', 'success');
+          } catch(e) { showToast('导出失败：' + (e && e.message), 'error'); }
+        });
+        modal.querySelectorAll('[data-snap-diff]').forEach(function(b) {
+          b.addEventListener('click', function() { showSnapshotDiff(parseInt(this.getAttribute('data-snap-diff'), 10)); });
+        });
+        modal.querySelectorAll('[data-snap-restore]').forEach(function(b) {
+          b.addEventListener('click', function() { restoreSnapshotByIndex(parseInt(this.getAttribute('data-snap-restore'), 10), false); closeIt(); });
+        });
+        modal.querySelectorAll('[data-snap-restore-cut]').forEach(function(b) {
+          b.addEventListener('click', function() { restoreSnapshotByIndex(parseInt(this.getAttribute('data-snap-restore-cut'), 10), true); closeIt(); });
+        });
+      }
+      // 快照 vs 当前 的差异明细
+      function showSnapshotDiff(snapIdx) {
+        var tab = _snapTabKey();
+        var snap = (cardDataSnapshots[tab] || {})[snapIdx];
+        if (!snap) { showToast('⚠️ 该快照已不存在', 'warning'); return; }
+        var meta = (snapshotMeta[tab] || {})[snapIdx] || {};
+        var lines = [];
+        var pushLine = function(t) { lines.push('<div class="snap-diff-line">' + t + '</div>'); };
+        var fieldLabels = { name: '名称', description: '世界观描述', personality: '性格', scenario: '场景', first_mes: '开场白', creator_notes: '备注', system_prompt: '系统提示词' };
+        Object.keys(fieldLabels).forEach(function(f) {
+          var a = String(snap[f] == null ? '' : snap[f]);
+          var b = String(cardData[f] == null ? '' : cardData[f]);
+          if (a === b) return;
+          var delta = b.length - a.length;
+          pushLine('<b>字段 ' + fieldLabels[f] + '</b>：' + a.length + '字 → ' + b.length + '字（' + (delta >= 0 ? '+' : '') + delta + '）');
+        });
+        var oldE = (snap.character_book && snap.character_book.entries) || [];
+        var newE = (cardData.character_book && cardData.character_book.entries) || [];
+        var oldMap = {}, newMap = {};
+        oldE.forEach(function(e) { var k = String(e.comment || ''); if (k) oldMap[k] = e; });
+        newE.forEach(function(e) { var k = String(e.comment || ''); if (k) newMap[k] = e; });
+        var added = [], removed = [], changed = [];
+        Object.keys(newMap).forEach(function(k) { if (!oldMap[k]) added.push(k); });
+        Object.keys(oldMap).forEach(function(k) { if (!newMap[k]) removed.push(k); });
+        Object.keys(newMap).forEach(function(k) {
+          if (!oldMap[k]) return;
+          var la = String(oldMap[k].content || '').length, lb = String(newMap[k].content || '').length;
+          var flag = '';
+          if (lb < la * 0.8 && (la - lb) >= 60) flag = ' <span class="pv-tag off">缩水</span>';
+          if (la !== lb || flag) changed.push(escHtml(k) + '（' + la + ' → ' + lb + '字）' + flag);
+        });
+        if (added.length) pushLine('<b>新增条目 ' + added.length + ' 条</b>：' + added.map(escHtml).join('、'));
+        if (removed.length) pushLine('<b>删除条目 ' + removed.length + ' 条</b>：' + removed.map(escHtml).join('、'));
+        if (changed.length) pushLine('<b>内容改动 ' + changed.length + ' 条</b>：<br>' + changed.join('<br>'));
+        var oldRx = (((snap.extensions || {}).regex_scripts) || []).length;
+        var newRx = (((cardData.extensions || {}).regex_scripts) || []).length;
+        if (oldRx !== newRx) pushLine('<b>正则脚本</b>：' + oldRx + ' → ' + newRx);
+        var oldSc = (((snap.extensions || {}).tavern_helper || {}).scripts || []).length;
+        var newSc = (((cardData.extensions || {}).tavern_helper || {}).scripts || []).length;
+        if (oldSc !== newSc) pushLine('<b>脚本</b>：' + oldSc + ' → ' + newSc);
+        if (!lines.length) lines.push('<div class="snap-diff-line">这一版和当前内容完全一致。</div>');
+        var overlay = doc.createElement('div');
+        overlay.className = 'pv-modal-overlay';
+        var modal = doc.createElement('div');
+        modal.className = 'pv-modal';
+        modal.innerHTML =
+          '<div class="pv-modal-head"><span>🔍 差异对比：' + (meta.label ? '「' + escHtml(meta.label) + '」之前' : '历史版本') + ' → 当前</span><button class="icon-btn icon-btn-square" id="sdClose">' + svgIcon('close', 15) + '</button></div>' +
+          '<div class="pv-modal-body"><div class="snap-diff">' + lines.join('') + '</div></div>' +
+          '<div class="pv-modal-foot"><button class="btn btn-ghost" id="sdClose2">关闭</button></div>';
+        overlay.appendChild(modal);
+        doc.body.appendChild(overlay);
+        var closeIt = function() { overlay.remove(); };
+        overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeIt(); });
+        modal.querySelector('#sdClose').addEventListener('click', closeIt);
+        modal.querySelector('#sdClose2').addEventListener('click', closeIt);
+      }
+      // 恢复某份快照（truncate=true 时同时截断对话到该位置）
+      function restoreSnapshotByIndex(snapIdx, truncateChat) {
+        var tab = _snapTabKey();
+        var snap = (cardDataSnapshots[tab] || {})[snapIdx];
+        if (!snap) { showToast('⚠️ 该快照已不存在', 'warning'); return false; }
+        var meta = (snapshotMeta[tab] || {})[snapIdx] || {};
+        var msg = '确定恢复到' + (meta.label ? '「' + meta.label + '」之前' : '这个历史版本') + '吗？\n\n';
+        msg += '✅ 世界书条目 / 描述 / 开场白 / MVU 条目 / 正则 / 脚本 全部回滚到那一刻';
+        msg += truncateChat ? '\n✅ 同时删除这之后的对话记录（上下文一致）' : '\nℹ️ 保留全部对话记录（只回滚内容）';
+        msg += '\n\n（当前内容会被覆盖，但当前状态也会留在快照里，可再切回来）';
+        if (!window.confirm(msg)) return false;
+        var ok = restoreCardDataSnapshot(snapIdx);
+        if (!ok) { showToast('⚠️ 恢复失败', 'error'); return false; }
+        if (truncateChat) {
+          var msgs = getCurrentMessages();
+          if (snapIdx < msgs.length) { msgs.length = snapIdx; }
+          clearSnapshotsAfter(snapIdx - 1);
+        }
+        progress = calcProgress();
+        saveToStorage();
+        rerenderChatMessages();
+        try { renderPreview(); } catch(_) {}
+        try { updateQuickActions(); } catch(_) {}
+        try { updateCtxBar(); } catch(_) {}
+        try { renderModDash(); } catch(_) {}
+        showToast('🕘 已恢复到历史版本' + (truncateChat ? '（对话也已截断）' : ''), 'success');
+        return true;
       }
 
       // 全局人设：AI人设 / 用户人设（存localStorage，buildPrompt注入）
@@ -11471,7 +11727,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         saveToStorage();
         progress = calcProgress();
         rerenderChatMessages();
-        showToast(ok ? '✅ 已撤回AI回复并回滚修改' : '✅ 已撤回AI回复（无快照可回滚，角色卡未变更）', 'success');
+        if (ok) showToast('✅ 已撤回AI回复，角色卡内容已回滚到修改前', 'success');
+        else showToast('⚠️ 消息已撤回，但这条AI回复没有可用快照，角色卡内容**没有**回滚。\n\n原因：快照随存档只保留最近 ' + SNAPSHOT_PERSIST + ' 次修改。\n💡可以打开「工作区 → 历史版本」看看还有哪些可恢复的版本。', 'warning', 10000);
       }
 
       // ===== 撤回：用户消息之后所有消息和操作（含cardData，含之后的用户消息） =====
@@ -11511,7 +11768,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         saveToStorage();
         progress = calcProgress();
         rerenderChatMessages();
-        showToast(ok ? '✅ 已撤回此条之后所有AI消息并���滚修改' : '✅ 已撤回此条之后所有AI消息（无快照可回滚，角色卡未变更）', 'success');
+        if (ok) showToast('✅ 已撤回此条之后所有AI消息，角色卡内容已回滚', 'success');
+        else showToast('⚠️ 消息已撤回，但这条AI回复没有可用快照，角色卡内容**没有**回滚。\n\n💡可以打开「工作区 → 历史版本」查看可恢复的版本。', 'warning', 10000);
+
       }
 
       // ===== 重新生成：某条AI消息（撤回该AI回复后重新调用AI）=====
@@ -14943,6 +15202,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       var pvSyncOrder = false;    // 拖拽排序时是否同步写入 insertion_order
       var pvMultiSelect = false;  // 多选模式
       var pvSelectedIdx = {};     // 多选模式下已选中的条目索引
+      var pvOpenIdx = {};         // 条目名 → 是否展开（重渲染后保持展开状态）
       function renderPreview() {
         if (_renderPreviewTimer) clearTimeout(_renderPreviewTimer);
         _renderPreviewTimer = setTimeout(_renderPreviewImpl, 80);
@@ -15100,18 +15360,16 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 
         // ===== 世界书条目：工具条（搜索/批量/模板/导入导出）+ 拖拽排序 + 参数直改 + 自定义高度 =====
         var _pvQ = String(pvEntryQuery || '');
-        // 常驻/触发 Token 预算统计
+        // 常驻/触发 Token 统计（只做统计展示，不设"建议≤500"之类的硬性提醒：
+        // 每个世界卡的需求不同，常驻多寡由用户自己判断）
         var _permTok = 0, _trigTok = 0, _noKeyCount = 0;
         entries.forEach(function(_e) {
           var _t = countTokens(_e.content || '');
           if (_e.constant) _permTok += _t; else _trigTok += _t;
           if (!_e.constant && (!_e.keys || _e.keys.length === 0)) _noKeyCount++;
         });
-        var _permPct = Math.min(100, Math.round(_permTok / 500 * 100));
-        var _permCls = _permTok > 800 ? 'over' : (_permTok > 500 ? 'warn' : 'ok');
         var _budgetRow = '<div class="pv-token-bar">' +
-            '<span class="pv-tok-item"><b style="color:var(--sage-text)">常驻 ' + _permTok + 'T</b><span class="pv-tok-sub">/ 建议≤500</span></span>' +
-            '<span class="pv-tok-track"><span class="pv-tok-fill ' + _permCls + '" style="width:' + _permPct + '%"></span></span>' +
+            '<span class="pv-tok-item"><b style="color:var(--sage-text)">常驻 ' + _permTok + 'T</b></span>' +
             '<span class="pv-tok-item"><b style="color:var(--amber-text)">触发 ' + _trigTok + 'T</b></span>' +
             (_noKeyCount > 0 ? '<span class="pv-tok-warn" title="这些触发条目没有关键词，酒馆绿灯模式下永远不会激活">⚠️ ' + _noKeyCount + ' 条无触发词</span>' : '') +
           '</div>';
@@ -15186,7 +15444,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               + '<label title="优先级 insertion_order，越大越先注入">优先级<input type="number" data-pv-field="order" data-pv-idx="' + realIdx + '" value="' + (_eOrder == null ? 100 : _eOrder) + '" min="0" max="1000"></label>'
               + '<label class="pv-param-grow" title="触发词，逗号分隔；常驻条目可留空">关键词<input type="text" data-pv-field="keys" data-pv-idx="' + realIdx + '" value="' + escAttr(_eKeys.join(', ')) + '" placeholder="逗号分隔"></label>'
               + '</div>';
-            eH += '<details class="pv-entry' + (e.constant ? ' is-const' : '') + (pvMultiSelect && pvSelectedIdx[realIdx] ? ' is-checked' : '') + '" data-pv-entry-row="' + realIdx + '" data-pv-search="' + escAttr(searchBlob) + '">'
+            eH += '<details class="pv-entry' + (e.constant ? ' is-const' : '') + (pvMultiSelect && pvSelectedIdx[realIdx] ? ' is-checked' : '') + (pvOpenIdx[String(label)] ? ' open' : '') + '" data-pv-entry-row="' + realIdx + '" data-pv-key="' + escAttr(String(label)) + '" data-pv-search="' + escAttr(searchBlob) + '">'
               + '<summary>'
               +   (pvMultiSelect ? '<input type="checkbox" class="pv-entry-check" data-pv-check="' + realIdx + '"' + (pvSelectedIdx[realIdx] ? ' checked' : '') + ' title="选中这条">' : '')
               +   '<span class="pv-entry-drag" draggable="true" title="按住拖动可调整条目顺序（顺序会影响预览与导出，开启「优先级同步」后也会写入优先级）">⠿</span>'
@@ -16059,6 +16317,11 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         };
         for (var dri = 0; dri < dragRows.length; dri++) {
           (function(row) {
+            // 记录展开/收起状态，避免改一个参数后整页重渲染把条目都收起来
+            row.addEventListener('toggle', function() {
+              var key = row.getAttribute('data-pv-key');
+              if (key) { if (row.open) pvOpenIdx[key] = true; else delete pvOpenIdx[key]; }
+            });
             var handle = row.querySelector('.pv-entry-drag');
             if (!handle) return;
             // 点把手不要触发展开/折叠
