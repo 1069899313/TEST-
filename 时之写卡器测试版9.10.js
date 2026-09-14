@@ -1,6 +1,6 @@
 (function() {
 /* ============================================================================
- * 时之写卡器 · Tavern Helper 脚本（整理版2026.9.10 08:21）
+ * 时之写卡器 · Tavern Helper 脚本（整理版2026.9.14 18:54）
  * ----------------------------------------------------------------------------
  * 项目类型：后台脚本（Tavern Helper Script · 相当于模板里的 index.ts）
  * 运行形式：单文件 JS，导入到酒馆脚本库，点击脚本按钮打开写卡器
@@ -396,6 +396,20 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 .pv-modal-label input:focus,.pv-modal-label textarea:focus{border-color:var(--accent-border-strong);box-shadow:0 0 0 3px var(--accent-soft);background:var(--surface)}
 .pv-modal-hint{font-size:.74em;color:var(--muted);line-height:1.6;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:var(--radius-sm);padding:8px 10px}
 .pv-modal-foot{padding:11px 18px;border-top:1px solid var(--line-soft);display:flex;justify-content:flex-end;gap:8px}
+/* ===== 状态栏风格预设 ===== */
+.sbsp-section{font-size:.8em;font-weight:600;color:var(--accent-deep);margin:10px 0 6px 0}
+.sbsp-chips{display:flex;flex-wrap:wrap;gap:6px}
+.sbsp-chip{font-family:inherit;font-size:.76em;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer;transition:all .16s}
+.sbsp-chip:hover{border-color:var(--accent-border);color:var(--accent-deep)}
+.sbsp-chip.on{background:linear-gradient(135deg,var(--accent-soft-strong),var(--accent-soft));border-color:var(--accent-border-strong);color:var(--accent-deep);font-weight:600}
+.sbsp-rules{display:flex;flex-direction:column;gap:5px}
+.sbsp-rule{display:flex;align-items:flex-start;gap:8px;font-size:.76em;color:var(--ink-soft);line-height:1.6;padding:7px 10px;background:var(--surface-soft);border:1px solid var(--line-soft);border-radius:var(--radius-sm);cursor:pointer;transition:all .16s}
+.sbsp-rule:hover{border-color:var(--accent-border)}
+.sbsp-rule input{margin-top:2px;accent-color:var(--accent);flex-shrink:0}
+/* ===== 工作模式选择 ===== */.wm-choice{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;padding:13px 15px;border-radius:var(--radius);border:1px solid var(--line);background:var(--surface-soft);cursor:pointer;font-family:inherit;transition:all .18s cubic-bezier(.4,0,.2,1)}
+.wm-choice:hover{border-color:var(--accent-border-strong);background:var(--surface);box-shadow:0 6px 20px rgba(79,70,229,.12);transform:translateY(-1px)}
+.wm-choice-title{font-size:.94em;font-weight:600;color:var(--accent-deep)}
+.wm-choice-desc{font-size:.76em;color:var(--muted);line-height:1.65}
 /* ===== 历史版本面板 ===== */
 .pv-modal-wide{max-width:760px}
 .snap-list{display:flex;flex-direction:column;gap:8px}
@@ -1139,6 +1153,25 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       return '<svg class="ic' + c + '" viewBox="0 0 24 24" width="' + s + '" height="' + s + '" fill="currentColor" aria-hidden="true"><path d="' + path + '"/></svg>';
     }
     return '<svg class="ic' + c + '" viewBox="0 0 24 24" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + path + '"/></svg>';
+  }
+
+  // ===== 🖱️ 点遮罩关闭弹窗（防误关）=====
+  // ⚠️旧写法只判断 click 的 target === 遮罩 —— 在弹窗输入框里按住拖动全选时，
+  //   鼠标划出弹窗、在遮罩上松开，click 的 target 就变成遮罩 → 弹窗被误关，非常烦人。
+  // 现在要求「在遮罩上按下 + 在遮罩上松开」两个条件同时成立才关闭。
+  function bindOverlayClose(overlayEl, closeFn) {
+    if (!overlayEl) return;
+    var downOnOverlay = false;
+    overlayEl.addEventListener('mousedown', function(e) {
+      downOnOverlay = (e.target === overlayEl);
+    });
+    overlayEl.addEventListener('click', function(e) {
+      var shouldClose = (e.target === overlayEl) && downOnOverlay;
+      downOnOverlay = false;
+      if (!shouldClose) return;
+      if (typeof closeFn === 'function') closeFn();
+      else if (overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
+    });
   }
 
   // ===== 日夜主题切换 =====
@@ -2052,8 +2085,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '- 常驻Token量仅供参考，AI失忆时再考虑精简内容\n' +
     '- 世界书条目不限字数/不限数量（自由增减，按创作进度自然增长）\n' +
     '**MVU条目Token预算铁律（8条工作流，详见9.1.6）**：\n' +
-    '- 【标准体系=8条按顺序逐条生成，缺一不可】8条固定顺序见9.1.6，核心规则：每生成1条停下等"继续"，前7条完成后才生成第8条（状态栏HTML）\n' +
-    '- ⚠️ 【铁律：逐条生成+等待继续】生成第1条后立即停下，结尾只问"已生成第1条，说\'继续\'生成第2条"；用户说"继续"再按顺序写下一条。禁止一次性输出2条及以上！\n' +
+    '- 【标准体系=8条按顺序生成，缺一不可】8条固定顺序见9.1.6，核心规则：从零新建时每生成1条停下等"继续"，前7条完成后才生成第8条（状态栏HTML）\n' +
+    '- ⚠️ 【铁律：默认逐条，用户要批量就必须批量】从零新建变量系统时：生成第1条后停下，结尾只问"已生成第1条，说\'继续\'生成第2条"。' +
+    '**但当用户明确要求批量时（"全部改一遍/一次性改完/大改/重做/别一条一条来/这几条一起改"），立刻在同一次回复里输出全部要改的条目，不许再问"要不要继续"、不许分多轮**——用户按请求次数付费，逐条挤是在浪费他的钱。\n' +
     '- ⚠️ 【铁律：前7条后才第8条】第8条是状态栏HTML，必须前7条全部齐全后才允许生成。前7条缺任意一条时，禁止提第8条或进入状态栏Step流程。\n' +
     '- 【附加条目=按需生成】仅当用户明确要求时，才允许生成8条之外的附加条目：如阶段判定变量、人设切换规则、EJS控制器、派生($)字段联动逻辑、阈值触发动态注入等。用户未明确要求的情况下禁止AI自行追加任何额外条目。\n' +
     '- 【废弃原多阶段变量耦合模板】原"好感度阶段→人设切换"的专属耦合提示词（原37/38号）已整体废弃；如需多阶段/分档位/状态机类变量，改用下方的【通用多阶段状态变量生成指导】，可适配好感度/剧情进度/系统模式/境界等级等任意场景。\n' +
@@ -2299,10 +2333,12 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '       $(() => { registerMvuSchema(Schema); })\n' +
     '     · 注意事项：①变量名可用中文；②此脚本只是第1条变量结构，还需按9.1.6工作流逐条生成第2-8条（每条停下等"继续"）；③写MVU Tab时，脚本输出后给用户一句："已生成第1条，说\'继续\'生成第2条[InitVar]初始变量"\n' +
     '\n' +
-    '## 9.1.6 MVU变量条目生成工作流（⚠️逐条生成，禁止一次性塞全部）\n' +
+    '## 9.1.6 MVU变量条目生成工作流（新建时逐条；用户要求批量时一次全改）\n' +
     '     · 【两阶段总览】\n' +
-    '       Phase A（前7条）：第①-⑦条MVU条目，逐条生成，每条停下等"继续"\n' +
+    '       Phase A（前7条）：第①-⑦条MVU条目，默认逐条生成，每条停下等"继续"\n' +
     '       Phase B（第8条）：前7条全部完成后，才进入状态栏HTML制作（Step2-6共5模块）\n' +
+    '       ⚠️【批量例外】用户说"全部改一遍/一次性改完/大改/重做/别一条一条来/这几条一起改/直接全给我"时，' +
+    '放弃逐条模式：**同一次回复里输出全部需要新增或修改的条目（脚本/条目/正则一起也行）**，不要问"要不要继续"、不要拆成多轮。\n' +
     '     · 【8条固定顺序（严格按此顺序，不能跳步）】\n' +
     '       第1条：变量结构脚本（tavern_helper.scripts，zod 4 Schema + registerMvuSchema）—— 见 9.1.5\n' +
     '       第2条：[InitVar]初始变量（世界书条目，enabled=false）—— 依据第1条 schema 生成 YAML，见 9.1.1\n' +
@@ -2312,7 +2348,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '       第6条：[mvu_update]变量输出格式强调（世界书条目，constant=true，默认 enabled=false）—— 固定 YAML，原封不动输出\n' +
     '       第7条：<状态栏>占位符提醒（世界书条目，constant=true）—— 提醒 AI 每条回复底部输出 <StatusPlaceHolderImpl/>\n' +
     '       第8条：正则6 [美化]MVU状态栏（regex_scripts，markdownOnly=true）—— ⚠️前7条全部完成后才生成！走 Step 2-6 状态栏5模块生成流程\n' +
-    '     · 【铁律1：逐条生成】每次只输出1条，输出后立即停下，结尾只问"已生成第N条，说\'继续\'生成下一条"——禁止一次性输出多条\n' +
+    '     · 【铁律1：逐条生成（仅新建时）】从零新建时每次只输出1条，输出后立即停下，结尾只问"已生成第N条，说\'继续\'生成下一条"。用户明确要批量时按上面【批量例外】执行，一次全改完\n' +
     '     · 【铁律2：schema 驱动】第2/3条必须严格依据第1条的 schema 字段名/层级/类型生成，schema 一改这两条必跟改\n' +
     '     · 【铁律3：固定内容原样输出】第4/5/6条是固定 YAML/固定内容，原封不动输出，不要修改任何字段\n' +
     '     · 【铁律4：前7条后才第8条】第8条是状态栏HTML，必须前7条全部齐全后才允许生成（写卡器会拦截并提示缺失条目）\n' +
@@ -5031,17 +5067,106 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       '  第6条：[mvu_update]变量输出格式强调\n' +
       '  第7条：<状态栏>占位符提醒条目\n' +
       '  第8条：正则6 [美化]MVU状态栏（即状态栏 HTML）—— 前7条完成后才生成\n\n' +
-      '⚠️ 铁律：每生成一条立即停下，等用户说"继续"再写下一条。禁止一次性输出多条！';
+      '⚠️ 默认每生成一条停下等"继续"；但如果用户明确说"全部生成/一次性补完/一起改"，就直接一次输出全部缺失条目，不要再逐条挤。';
+  }
+
+  // ====================================================================
+  // 🎨 状态栏生成预设（给免费额度/弱模型"上缰绳"用）
+  //   问题：直接让模型自由发挥做状态栏，往往"很简陋 + 反复改口 + 容易出bug"。
+  //   方案：把"风格/版式/模块/动效/技术硬约束"变成可勾选项，拼成一段高约束提示词，
+  //         一次就把要求说清楚，减少来回返工（每次返工都要花用户的请求次数）。
+  // ====================================================================
+  var SB_STYLE_PRESETS = {
+    darkglass: { name: '深色毛玻璃', desc: '深色半透明卡片（--card-bg: rgba(30,35,45,.82)）+ backdrop-filter: blur(6px)，浅灰正文(#e2e8f0)，青蓝点缀(#93c5fd)，圆角14px，弱阴影' },
+    lightmin:  { name: '浅色简约', desc: '白/浅灰底(#f7f8fa 与 #ffffff)，深灰字(#2d3748)，1px 细边框做分隔，单一主色点缀，圆角10px，几乎不用阴影，大量留白' },
+    cyber:     { name: '赛博霓虹', desc: '近黑底(#0a0e17)，青色(#22d3ee)+品红(#f472b6)霓虹描边与 text-shadow 发光，等宽字体，切角卡片(clip-path)，网格线装饰' },
+    jp:        { name: '日系清新', desc: '米白/淡蓝粉底(#fdfcf8)，低饱和马卡龙配色，大圆角与留白，极浅阴影，小巧的衬线标题，柔和不刺眼' },
+    gothic:    { name: '暗黑哥特', desc: '墨黑+暗红底，金铜色(#c9a227)描边，衬线字体，尖角边框与纹样分隔线，暗色渐变，气氛沉重' },
+    pixel:     { name: '像素复古', desc: '深色底+高饱和像素色块，font-family: monospace，4px 硬边框、无圆角，像素风分隔线，8bit 游戏质感' },
+    custom:    { name: '自定义（在下方填写风格描述）', desc: '' }
+  };
+  var SB_LAYOUT_PRESETS = {
+    topbar: { name: '顶部横条', desc: '一条横向状态条：左侧头像+姓名，右侧并排关键数值，整体不超过 2 行' },
+    left:   { name: '左侧竖栏', desc: '窄栏放头像与核心数值，右侧主区放详细列表，两栏 flex 布局' },
+    twocol: { name: '双栏', desc: '左栏基本信息与数值，右栏物品/关系/任务，等高对齐' },
+    grid:   { name: '卡片网格', desc: '每类信息一张独立卡片，用 grid 排列（桌面 2-3 列，窄屏自动单列）' },
+    single: { name: '单列纵向', desc: '从上到下依次排列各区块，区块之间用细分隔线，适合窄屏' }
+  };
+  var SB_MODULE_PRESETS = {
+    profile:   '头像 + 姓名/身份/称号等基本资料',
+    stats:     '状态数值（百分比用进度条，其余用数字/文字）',
+    inventory: '物品 / 背包 / 装备列表',
+    relation:  '人物关系与好感度（列表或进度条）',
+    quest:     '任务 / 事件 / 待办列表',
+    time:      '时间与地点',
+    weather:   '天气 / 环境状态',
+    attributes:'属性面板（力量/敏捷/体质等一组数值）',
+    custom:    '自定义模块（在下方额外要求里说明）'
+  };
+  var SB_FX_PRESETS = {
+    tween: '数值变化时平滑过渡（CSS transition），不要突兀跳变',
+    hover: '鼠标悬浮时卡片轻微高亮/浮起',
+    flow:  '标题或边框用低强度渐变流光装饰（务必克制，不能影响阅读）',
+    enter: '首次加载淡入动画（0.3s 以内）'
+  };
+  var SB_HARD_RULES = {
+    nodep:    '禁止任何外部依赖：不引用 CDN、外部图片、外部字体，全部内联写死（酒馆里加载不到外网资源会白屏）',
+    getvar:   '读取变量必须用：await waitGlobalInitialized("Mvu") → const all = getAllVariables() → const data = _.get(all, "stat_data", {})；禁止直接用 Mvu.getVar（有时序失效问题）',
+    fallback: '每个字段都用 _.get(data, "路径", 默认值) 取值，字段缺失/为 null/类型不对时也要正常显示占位，绝不能抛错白屏',
+    norecur:  '禁止递归渲染与 eval：用 populateCharacterData() 点对点填充每个 id（骨架里每个变量对应唯一 id）',
+    sync:     '同步机制：以 setInterval(刷新, 2000) 为主，Mvu.events.VARIABLE_INITIALIZED / VARIABLE_UPDATE_ENDED 事件作兜底；整体包 try/catch，出错时显示占位文案',
+    mobile:   '移动端自适应：宽度 100%、max-width 不写死具体像素，字号用 em 或 clamp()，窄屏自动单列',
+    safe:     '变量值一律用 textContent 写入，禁止拼进 innerHTML（避免内容里的标签/引号把 DOM 撑坏）'
+  };
+  var SB_DEFAULT_PRESET = {
+    style: 'darkglass',
+    layout: 'grid',
+    modules: ['profile', 'stats', 'inventory', 'relation'],
+    fx: ['tween', 'hover'],
+    rules: ['nodep', 'getvar', 'fallback', 'norecur', 'sync', 'mobile', 'safe'],
+    customStyle: '',
+    custom: ''
+  };
+  // 把勾选状态拼成一段高约束提示词
+  function buildStatusBarPrompt(sel) {
+    sel = sel || SB_DEFAULT_PRESET;
+    var out = '请生成（需要时也可以重做）MVU 状态栏 HTML —— 写卡器会把它保存为正则6「[美化]MVU状态栏」。\n\n';
+    var styleObj = SB_STYLE_PRESETS[sel.style];
+    var styleName = styleObj ? styleObj.name : '自定义';
+    var styleDesc = (sel.style === 'custom' && sel.customStyle) ? sel.customStyle : (styleObj ? styleObj.desc : '');
+    out += '【视觉风格】' + styleName + (styleDesc ? '：' + styleDesc : '') + '\n';
+    var layoutObj = SB_LAYOUT_PRESETS[sel.layout];
+    out += '【版式】' + (layoutObj ? (layoutObj.name + '：' + layoutObj.desc) : '自定义') + '\n';
+    var mods = (sel.modules || []).map(function(k) { return SB_MODULE_PRESETS[k]; }).filter(Boolean);
+    out += '【必须包含的模块】\n' + (mods.length ? mods.map(function(m) { return '· ' + m; }).join('\n') : '· （未指定，按变量内容自行组织）') + '\n';
+    var fxs = (sel.fx || []).map(function(k) { return SB_FX_PRESETS[k]; }).filter(Boolean);
+    if (fxs.length) out += '【动效】\n' + fxs.map(function(f) { return '· ' + f; }).join('\n') + '\n';
+    if (sel.custom) out += '【额外要求】' + sel.custom + '\n';
+    var rules = (sel.rules || []).map(function(k) { return SB_HARD_RULES[k]; }).filter(Boolean);
+    out += '\n【技术硬约束（必须全部满足，否则状态栏会出bug）】\n' +
+      (rules.length ? rules.map(function(r, i) { return (i + 1) + '. ' + r; }).join('\n') : '（本次未启用硬约束，请自行保证不出错）') + '\n';
+    out += '\n【数据读取与填充规范（照做，不要自创写法）】\n' +
+      '· 入口：$(async function(){ try { ... } catch(err){ 显示兜底占位 } })；内部先 await waitGlobalInitialized("Mvu")\n' +
+      '· 逐字段取值：const v = _.get(data, "路径.字段", 默认值); $(\'#对应id\').text(v);\n' +
+      '· 跳过 _ 和 $ 开头的字段（只读字段，由脚本派生，不显示或只读显示）\n' +
+      '· 数值 0-100 用进度条宽度百分比；布尔值显示「✓ / ✕」用颜色区分，不要用 emoji\n' +
+      '\n【输出要求】\n' +
+      '· 只输出**一个**完整 HTML 文档代码块（```html 开头）：<head> 内 <style>、<body> 内 <script type="module">\n' +
+      '· 不要 <!doctype html>、不要 <html> 根标签；不要输出解释文字，不要分多段\n' +
+      '· 先保证结构完整、标签闭合、能直接跑起来，再谈美化；宁可朴素也不要有未闭合标签或未定义变量';
+    return out;
   }
 
   // ====================================================================
   // 公共常量：MVU 8条工作流规范文本（供 mvuPrompts.init_var / var_update_rule / buildMissingMvuHint 引用，避免多处重复维护）
   // ====================================================================
-  // 逐条生成铁则（最高优先级）
+  // 逐条生成铁则（最高优先级）—— ⚠️只约束"从零新建变量系统"，用户明确要求批量时必须一次性全改
   var MVU_SEQUENTIAL_RULE =
-    '【逐条生成铁则（最高优先级）】\n' +
-    '⚠️ 一次只输出1条内容（脚本/条目/正则），输出后立即停下，不要写后面的。结尾只问用户："已生成第N条，说\'继续\'生成下一条"——不要一次性输出多条！\n' +
-    '用户说"继续"后，再按顺序生成下一条。前7条全部完成后，才生成第8条（状态栏HTML）。\n\n';
+    '【逐条生成铁则（仅适用于从零新建变量系统）】\n' +
+    '⚠️ 默认：一次只输出1条内容（脚本/条目/正则），输出后立即停下，不要写后面的。结尾只问用户："已生成第N条，说\'继续\'生成下一条"。\n' +
+    '用户说"继续"后，再按顺序生成下一条。前7条全部完成后，才生成第8条（状态栏HTML）。\n' +
+    '🚫【例外·必须遵守】当用户明确要求批量的语境出现时——例如"全部改一遍""一次性改完""大改""重做""这几条一起改""别一条一条来""直接给我全部"——立刻放弃逐条模式：**在同一次回复里输出全部需要修改的条目**，'
+    + '不要只改一条就问要不要继续，不要拆成多轮。写卡器会自动逐条执行，你只需要一次全写出来。\n\n';
   // 8条固定顺序（含每条详细规范）—— 第3/4条顺序已调整为：更新规则在前，变量列表在后
   var MVU_8STEPS_DETAIL =
     '【8条固定顺序（严格按此顺序，不能跳步）】\n' +
@@ -5516,7 +5641,24 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 
     // 构建系统提示词（角色卡Tab：过滤SYS_PROMPT中的MVU段落 + 追加MVU隔离禁令）
     var filteredSysPrompt = filterOutMvuSectionsFromSysPrompt(SYS_PROMPT);
-    var sysPrompt = filteredSysPrompt + stateInfo + existingInfo + qcBlock + statusBarStateInfo + antiMvuBlock;
+    // ===== 🆕 修改模式（导入旧卡后）：换一套行为准则，不要再用"从零引导"的口吻 ====
+    var reviseBlock = '';
+    if (workMode === 'revise') {
+      reviseBlock = '\n\n' +
+        '═══════════════════════════════════════════════════════════════════\n' +
+        '🛠️【当前工作模式：修改现有卡（不是从零创作！）】\n' +
+        '═══════════════════════════════════════════════════════════════════\n' +
+        '用户导入了一张已经写好的角色卡，你的任务是**在它基础上做增/删/改**，不是重写、不是引导他从头搭建。\n' +
+        '1. ✅先读下方「当前角色卡已有内容」，把已有条目当成既成事实，只动用户要求动的部分\n' +
+        '2. ❌禁止重建整卡、禁止改写未被要求改动的条目、禁止"顺手优化"用户没提的内容\n' +
+        '3. ❌不要再走"步骤1定核心铁则→步骤2搭世界基底…"的引导流程；不要问"你想做什么样的世界"这类从零开始的问题\n' +
+        '4. ✅用户问什么答什么：只问问题/讨论设定时，正常回答，不要乱改；明确要改时才输出 ::: 操作块\n' +
+        '5. ✅修改已有条目必须遵守内容保全铁律：原内容 + 新增/改动，只增不减\n' +
+        '6. ✅批量要求必须一次做完：用户说"全部改/一次性改完/这几条一起"→ 同一次回复输出全部操作块\n' +
+        '7. ✅主动指出问题：发现原卡有硬伤（条目没触发词、常驻条目过多、keys为空、字段矛盾）时，用一两句话指出并给出 ::: 操作块修复\n' +
+        '═══════════════════════════════════════════════════════════════════\n';
+    }
+    var sysPrompt = filteredSysPrompt + reviseBlock + stateInfo + existingInfo + qcBlock + statusBarStateInfo + antiMvuBlock;
 
     // jsonReminder：角色卡Tab下永远不进入状态栏代码生成模式，强制用:::操作块协议
     var jsonReminder = '';
@@ -5925,6 +6067,28 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         fullPrompt += roleLabel + ': ' + msgContent + '\n\n';
       }
     });
+    // ===== 🆕 用户指令最高优先级注入（MVU Tab：解决"我要求批量，它却还逐条挤"）=====
+    var _lastUserMsgM = '';
+    for (var _luiM = tabMessages.length - 1; _luiM >= 0; _luiM--) {
+      if (tabMessages[_luiM] && tabMessages[_luiM].role === 'user') { _lastUserMsgM = String(tabMessages[_luiM].content || '').trim(); break; }
+    }
+    if (_lastUserMsgM) {
+      var _batchReM = /(全部|所有|所有的|一次性|一起|批量|整批|都改|都加|都做|统一|大改|重做|重构|重来|别一条一条|不要逐条|直接全|全给|全改|一起给)/;
+      var _seqReM = /(一条一条|逐条|一条条|先做一条|只做一条|慢慢来)/;
+      var _blkM = '\n\n═══════════════════════════════════════════════════════════════════\n' +
+        '⚠️⚠️⚠️【最高优先级 · 用户最新指令】优先级高于本提示词中任何通用规则（仅低于输出格式协议）：\n' +
+        '用户原话：「' + _lastUserMsgM + '」\n';
+      if (_batchReM.test(_lastUserMsgM) && !_seqReM.test(_lastUserMsgM)) {
+        _blkM += '\n【本次任务性质判定：批量执行（硬约束，覆盖"逐条生成铁则"）】\n' +
+          '· 用户要求批量 → 放弃"逐条生成、停下等继续"的默认模式，**在这一次回复里把全部需要新增/修改的条目、脚本、正则一次性输出完**。\n' +
+          '· 禁止只改1条就问"要不要继续"；禁止拆成多轮；禁止以"内容太多/太长"为理由减少输出。\n' +
+          '· 写卡器会自动逐条执行你写的每个 ::: 块，8条一起给也完全没问题。\n';
+      }
+      _blkM += '· 违反以上用户指令 = 任务失败（用户会白花一次请求次数）。\n' +
+        '═══════════════════════════════════════════════════════════════════\n';
+      fullPrompt += _blkM;
+    }
+
     fullPrompt += '助手: ';
     fullPrompt += '（请只针对上方>>>标记的最新指令回复。严格遵守MVU Tab核心铁律：不要生成任何角色卡/世界书条目。）';
 
@@ -8967,7 +9131,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               '</div>' +
               '<button class="start-btn" id="startBtn">' + svgIcon('play', 18) + ' 开始创作</button>' +
               '<div class="welcome-actions">' +
-                '<button class="btn btn-ghost" id="importBtn">' + svgIcon('download', 15) + ' 导入现有卡</button>' +
+                '<button class="btn btn-ghost" id="importBtn">' + svgIcon('download', 15) + ' 导入现有卡并修改</button>' +
                 '<button class="btn btn-ghost" id="continueBtn" style="display:none">' + svgIcon('folderOpen', 15) + ' 继续上次</button>' +
               '</div>' +
               '<p style="font-size:.7em;color:var(--muted);margin-top:18px">ST权重分层8体系：基础公理 → 交互软规则 → 核心铁则 → 近场强约束 → 场景机制 → 实体交互 → 叙事背景 → 动态适配</p>' +
@@ -9104,6 +9268,14 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         items += '<div class="ws-dropdown-section">工作台</div>';
         items += '<div class="ws-dropdown-item" data-action="open-workspace">' + svgIcon('folder', 15) + ' 打开工作台 <span class="ws-item-badge">Tab</span></div>';
         items += '<div class="ws-dropdown-item" data-action="snapshots" title="查看/恢复每次AI修改前的完整状态（世界书/描述/开场白/MVU/正则/脚本）">' + svgIcon('undo', 15) + ' 历史版本</div>';
+        // 🛠️ 工作模式切换（从零创作 / 修改现有卡）
+        items += '<div class="ws-dropdown-divider"></div>';
+        items += '<div class="ws-dropdown-section">工作模式</div>';
+        items += '<div class="ws-guard-row">'
+          + '<button type="button" class="ws-guard-btn' + (workMode === 'create' ? ' on' : '') + '" data-workmode="create" title="从零创作：AI按6步引导逐步搭建">✨ 从零创作</button>'
+          + '<button type="button" class="ws-guard-btn' + (workMode === 'revise' ? ' on' : '') + '" data-workmode="revise" title="修改现有卡：AI只改你要求的部分，不重建整卡">🛠️ 修改现有卡</button>'
+          + '</div>';
+        items += '<div class="ws-guard-hint">当前：' + (workMode === 'revise' ? '修改现有卡 —— 只动你要求的部分，保留其它内容' : '从零创作 —— 按引导流程逐步搭建新卡') + '</div>';
         // ===== 字体大小：可展开的控件（工作区下拉中）=====
         items += '<div class="ws-font-expand collapsed" id="wsFontExpand">' +
                     '<div class="ws-font-header" id="wsFontHeader">' + svgIcon('eye', 14) + ' 字体大小 <span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px"><span class="ws-font-arrow">▾</span></span></div>' +
@@ -9203,6 +9375,15 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             renderWorkspaceMenuItems();
             dropdown.classList.add('show');
             showToast('🛡️ 内容保全模式已切换：' + this.textContent, 'info');
+          });
+        });
+        // 🛠️ 工作模式切换
+        dropdown.querySelectorAll('[data-workmode]').forEach(function(wb) {
+          wb.addEventListener('click', function(e) {
+            e.stopPropagation();
+            setWorkMode(this.getAttribute('data-workmode'));
+            renderWorkspaceMenuItems();
+            dropdown.classList.add('show');
           });
         });
         // 绑定点击
@@ -9386,9 +9567,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           '</div>';
         // 关闭
         doc.getElementById('wsCloseBtn').addEventListener('click', closeWorkspacePanel);
-        doc.getElementById('wsBackdrop').addEventListener('click', function(e) {
-          if (e.target === this) closeWorkspacePanel();
-        });
+        bindOverlayClose(doc.getElementById('wsBackdrop'), closeWorkspacePanel);
         // 保存所有
         doc.getElementById('wsSaveAllBtn').addEventListener('click', function() {
           var saved = 0;
@@ -10074,7 +10253,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         tmp.innerHTML = h;
         var modalEl = tmp.firstElementChild;
         doc.body.appendChild(modalEl);
-        modalEl.addEventListener('click', function(e) { if (e.target === modalEl) modalEl.remove(); });
+        bindOverlayClose(modalEl, function() { modalEl.remove(); });
         doc.getElementById('importCloseBtn').addEventListener('click', function() { modalEl.remove(); });
 
         var tabs = modalEl.querySelectorAll('.import-tab');
@@ -10126,6 +10305,55 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           }
         };
         reader.readAsText(file);
+      }
+
+      // ===== 🛠️ 工作模式：create=从零创作 / revise=修改现有卡 =====
+      function setWorkMode(mode, opts) {
+        workMode = (mode === 'revise') ? 'revise' : 'create';
+        try { saveToStorage(); } catch(_) {}
+        try {
+          var t = doc.querySelector('.topbar h1');
+          if (t && activeTab === 'card') {
+            t.innerHTML = svgIcon('bolt', 18, 'topbar-ic') + ' 时之写卡器' +
+              (workMode === 'revise' ? ' <span style="font-weight:400;font-size:.8em;color:var(--sage-text)">· 修改模式</span>' : '');
+          }
+        } catch(_tErr) {}
+        try { updateQuickActions(); } catch(_) {}
+        try { updateCtxBar(); } catch(_) {}
+        if (!opts || !opts.silent) {
+          showToast(workMode === 'revise'
+            ? '🛠️ 已进入「修改现有卡」模式：AI 只改你要求的部分，不会重建整卡'
+            : '✨ 已进入「从零创作」模式：AI 按 6 步引导从头搭建', 'info', 5000);
+        }
+      }
+      // 导入卡之后的选择弹窗
+      function showWorkModeChooser() {
+        var overlay = doc.createElement('div');
+        overlay.className = 'pv-modal-overlay';
+        var modal = doc.createElement('div');
+        modal.className = 'pv-modal';
+        var entriesLen = ((cardData.character_book || {}).entries || []).length;
+        modal.innerHTML =
+          '<div class="pv-modal-head"><span>✅ 导入完成：' + escHtml(cardData.name || '未命名') + '</span><button class="icon-btn icon-btn-square" id="wmClose">' + svgIcon('close', 15) + '</button></div>' +
+          '<div class="pv-modal-body">' +
+            '<div class="pv-modal-hint">已读取：描述 ' + (cardData.description || '').length + ' 字 · 开场白 ' + (cardData.first_mes || '').length + ' 字 · 世界书 ' + entriesLen + ' 条</div>' +
+            '<div class="pv-modal-hint">接下来做哪种工作？这决定 AI 的行为方式，之后可随时在「工作区」里切换。</div>' +
+            '<button type="button" class="wm-choice" id="wmRevise">' +
+              '<span class="wm-choice-title">🛠️ 修改这张卡（推荐）</span>' +
+              '<span class="wm-choice-desc">在原有内容上做增 / 删 / 改：AI 只动你要求的部分，其它内容原样保留。适合补设定、改角色、修开场白、加条目、整理触发词。</span>' +
+            '</button>' +
+            '<button type="button" class="wm-choice" id="wmCreate">' +
+              '<span class="wm-choice-title">✨ 以此为素材重新创作</span>' +
+              '<span class="wm-choice-desc">把导入的卡当参考，AI 按 6 步引导从零做一张新卡（已有内容会被新内容逐步覆盖）。</span>' +
+            '</button>' +
+          '</div>';
+        overlay.appendChild(modal);
+        doc.body.appendChild(overlay);
+        var closeIt = function() { overlay.remove(); };
+        bindOverlayClose(overlay, closeIt);
+        modal.querySelector('#wmClose').addEventListener('click', closeIt);
+        modal.querySelector('#wmRevise').addEventListener('click', function() { setWorkMode('revise'); closeIt(); });
+        modal.querySelector('#wmCreate').addEventListener('click', function() { setWorkMode('create'); closeIt(); });
       }
 
       function importCardData(data) {
@@ -10287,6 +10515,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           '请告诉我你想做什么！';
         addAssistantMsg(greeting);
         saveToStorage();
+        // 🛠️ 让用户选择工作模式（修改现有卡 / 重新创作），不再默认按"从零引导"走
+        try { showWorkModeChooser(); } catch(_wmErr) { console.warn('workMode chooser error:', _wmErr && _wmErr.message); }
       }
 
         // ============================================================================
@@ -10436,6 +10666,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             pvEntryHeights: pvEntryHeights,
             pvSyncOrder: pvSyncOrder,
             contentGuardMode: contentGuardMode,
+            workMode: workMode,
+            sbPresetSel: sbPresetSel,
             // 历史版本快照（只存最近 SNAPSHOT_PERSIST 份/每个Tab，避免存档爆掉）
             snapshots: _snapshotsForStorage(),
             snapshotMeta: snapshotMeta,
@@ -10570,6 +10802,10 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             if (state.pvEntryHeights && typeof state.pvEntryHeights === 'object') pvEntryHeights = state.pvEntryHeights;
             if (typeof state.pvSyncOrder === 'boolean') pvSyncOrder = state.pvSyncOrder;
             if (state.contentGuardMode === 'merge' || state.contentGuardMode === 'warn' || state.contentGuardMode === 'off') contentGuardMode = state.contentGuardMode;
+            if (state.workMode === 'create' || state.workMode === 'revise') workMode = state.workMode;
+            if (state.sbPresetSel && typeof state.sbPresetSel === 'object') {
+              sbPresetSel = Object.assign(JSON.parse(JSON.stringify(SB_DEFAULT_PRESET)), state.sbPresetSel);
+            }
             // 历史版本快照
             if (state.snapshots && typeof state.snapshots === 'object') {
               cardDataSnapshots.card = state.snapshots.card || {};
@@ -10709,12 +10945,13 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         var stageName, stageIcon;
         if (__tab === 'card') {
           // ⚠️修复：阶段名改用"第一个还没做的体系"，不再用进度百分比分段（否则永远慢一步）
+          var _modeTag = (workMode === 'revise') ? '🛠️ 修改模式 · ' : '';
           if (_nsCtx && _nsCtx.next) {
             stageIcon = 'info';
-            stageName = '下一步：' + _nsCtx.next.label + ' · 体系 ' + _nsCtx.done + '/' + _nsCtx.total;
+            stageName = _modeTag + '下一步：' + _nsCtx.next.label + ' · 体系 ' + _nsCtx.done + '/' + _nsCtx.total;
           } else {
             stageIcon = 'checkCircle';
-            stageName = '八大体系已齐全 ' + (_nsCtx ? _nsCtx.done : 0) + '/' + (_nsCtx ? _nsCtx.total : 0) + ' · 可写入酒馆';
+            stageName = _modeTag + '八大体系已齐全 ' + (_nsCtx ? _nsCtx.done : 0) + '/' + (_nsCtx ? _nsCtx.total : 0) + ' · 可写入酒馆';
           }
         } else {
           // MVU Tab：静态阶段标签（进度由8步chip展示，避免与chip重复冲突）
@@ -10806,7 +11043,17 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           var _ns = getNextCardStep();
           var _hasFirstMes = !!(cardData.first_mes && cardData.first_mes.trim().length >= 50);
           var _hasMvuEntries = ((cardData.character_book || {}).entries || []).some(function(e) { return isMvuSystemEntry(e.comment || ''); });
-          if (_ns.next) {
+          if (workMode === 'revise') {
+            // 修改模式：先体检 → 再补缺失体系 → 最后写入
+            actions.push({ action: 'qc', icon: 'checkCircle', label: '体检现有卡', hl: !_ns.next, title: '跑一遍质检，列出这张卡可改进的地方（缺触发词/常驻过多/字段矛盾等）' });
+            if (_ns.next) {
+              actions.push({
+                action: _ns.next.action, icon: _ns.next.icon, label: '下一步：' + _ns.next.label, hl: true,
+                title: '这张卡还缺【' + _ns.next.label + '】，点一下让AI补上（体系 ' + _ns.done + '/' + _ns.total + '）'
+              });
+            }
+            actions.push({ action: 'optimize', icon: 'wrench', label: 'AI优化', title: '根据质检未达标项让AI批量修复' });
+          } else if (_ns.next) {
             actions.push({
               action: _ns.next.action, icon: _ns.next.icon, label: '下一步：' + _ns.next.label, hl: true,
               title: '已完成的体系会自动跳过（当前体系 ' + _ns.done + '/' + _ns.total + '）· 点击后让AI补这个体系'
@@ -10817,7 +11064,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             actions.push({ action: 'goto_mvu', icon: 'sliders', label: '去做MVU变量/状态栏', hl: true, title: '世界观体系已齐全，可去MVU Tab做变量与状态栏（可选）' });
           }
           // 生成角色卡并写入酒馆（始终可点，体系齐全时高亮）
-          actions.push({ action: 'generate', icon: 'sparkle', label: '生成并写入酒馆', title: '通过写卡器装配角色卡（含MVU/正则/脚本），直接写入到酒馆当前角色卡', hl: !_ns.next && _hasFirstMes });
+          actions.push({ action: 'generate', icon: 'sparkle', label: '生成并写入酒馆', title: '通过写卡器装配角色卡（含MVU/正则/脚本），直接写入到酒馆当前角色卡', hl: (workMode === 'revise' ? !_ns.next : (!_ns.next && _hasFirstMes)) });
         } else {
           // MVU Tab：基于8条工作流的三阶段按钮组
           var _chk = checkMvu8Entries(cardData);
@@ -10842,6 +11089,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             actions.push({ action: 'reset_sb',        icon: 'trash',   label: '清除状态栏' });
           }
           // ===== 状态栏手动工具：无论哪一阶段都常驻（AI自动识别靠不住时的兜底） =====
+          actions.push({ action: 'sb_preset',        icon: 'palette', label: '状态栏风格预设' });
           actions.push({ action: 'manual-import-sb', icon: 'download', label: '手动导入状态栏' });
           actions.push({ action: 'edit-sb-regex',    icon: 'sliders', label: '编辑状态栏正则' });
         }
@@ -10917,7 +11165,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 
         // ========== Tab 隔离：动作权限校验，跨Tab动作自动跳转 ==========
         // 在角色卡Tab中点击了MVU专属动作 → 自动切到MVU Tab再执行
-        var mvuOnlyActions = ['init_var', 'var_update_rule', 'start_sb', 'continue_sb', 'reset_sb', 'mvuPreview', 'continue_mvu'];
+        var mvuOnlyActions = ['init_var', 'var_update_rule', 'start_sb', 'continue_sb', 'reset_sb', 'mvuPreview', 'continue_mvu', 'sb_preset', 'manual-import-sb', 'edit-sb-regex'];
         if (currentTab === 'card' && mvuOnlyActions.indexOf(action) >= 0) {
           showToast('「' + action + '」是MVU专属功能，正在切换到MVU变量状态栏Tab...', 'info');
           switchTab('mvu');
@@ -10981,6 +11229,10 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           return;
         }
         // ===== 状态栏手动导入 / 编辑正则（任何Tab、任何阶段都可用，不依赖AI自动识别）=====
+        if (action === 'sb_preset') {
+          showStatusBarPresetModal();
+          return;
+        }
         if (action === 'manual-import-sb') {
           showManualImportSB();
           return;
@@ -11035,9 +11287,10 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             MVU_MODIFY_RULE + '\n\n' +
             '请先收集用户的变量需求（角色/世界观/场景/需要追踪什么状态），然后按上述8条顺序**逐条**开始生成。现在先生成【第1条：变量结构脚本(zod 4 schema)】。',
           var_update_rule:
-            '请帮我完善当前MVU系统的缺失条目，严格遵守【逐条生成铁则】：\n' +
-            '⚠️ 一次只补1条，输出后立即停下问"已生成第N条，说\'继续\'生成下一条"。前7条完成后才生成第8条。\n\n' +
-            '先检查当前已有的条目，然后按以下8条固定顺序从缺失的第一条开始补：\n' +
+            '请帮我完善当前MVU系统的缺失/需要修改的条目。\n' +
+            '⚠️ 默认一次补1条，输出后停下问"已生成第N条，说\'继续\'生成下一条"；前7条完成后才生成第8条。\n' +
+            '🚫 但如果我在同一条消息里说了"全部/一次性/一起改/大改/重做/别一条一条来"，就**一次把全部需要新增或修改的条目都输出**，不要逐条问。\n\n' +
+            '先检查当前已有的条目，然后按以下8条固定顺序从缺失的第一条开始补（批量模式下则一次全部输出）：\n' +
             MVU_8STEPS_DETAIL +
             MVU_VAR_SPEC + '\n\n' +
             MVU_MODIFY_RULE
@@ -11412,7 +11665,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         overlay.appendChild(modal);
         doc.body.appendChild(overlay);
         var closeIt = function() { overlay.remove(); };
-        overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeIt(); });
+        bindOverlayClose(overlay, closeIt);
         modal.querySelector('#snapClose').addEventListener('click', closeIt);
         modal.querySelector('#snapClose2').addEventListener('click', closeIt);
         modal.querySelector('#snapClear').addEventListener('click', function() {
@@ -11500,7 +11753,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         overlay.appendChild(modal);
         doc.body.appendChild(overlay);
         var closeIt = function() { overlay.remove(); };
-        overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeIt(); });
+        bindOverlayClose(overlay, closeIt);
         modal.querySelector('#sdClose').addEventListener('click', closeIt);
         modal.querySelector('#sdClose2').addEventListener('click', closeIt);
       }
@@ -11575,7 +11828,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           close();
           showToast(title + '已保存', 'success');
         });
-        mask.addEventListener('click', function(e) { if (e.target === mask) close(); });
+        bindOverlayClose(mask, close);
       }
 
       // 关闭所有已打开的头像菜单
@@ -11874,7 +12127,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         if (ta) { try { ta.focus(); } catch(_) {} }
         var close = function() { if (mask.parentNode) mask.parentNode.removeChild(mask); };
         doc.getElementById('editMsgCancel').addEventListener('click', close);
-        mask.addEventListener('click', function(e) { if (e.target === mask) close(); });
+        bindOverlayClose(mask, close);
         doc.getElementById('editMsgOk').addEventListener('click', function() {
           var newText = ta ? ta.value : '';
           if (!newText || !newText.trim()) { showToast('消息内容不能为空', 'warning'); return; }
@@ -13514,7 +13767,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         function closeImport() { if (overlay.parentNode) overlay.remove(); }
         doc.getElementById('sbImportClose').addEventListener('click', closeImport);
         doc.getElementById('sbImportCancel').addEventListener('click', closeImport);
-        overlay.addEventListener('click', function(e) { if (e.target === overlay) closeImport(); });
+        bindOverlayClose(overlay, closeImport);
         doc.getElementById('sbImportSave').addEventListener('click', function() {
           var ta = doc.getElementById('sbImportTextarea');
           if (!ta) return;
@@ -13585,7 +13838,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         function closeEditor() { if (overlay.parentNode) overlay.remove(); }
         doc.getElementById('rxEditorClose').addEventListener('click', closeEditor);
         doc.getElementById('rxEditorCancel').addEventListener('click', closeEditor);
-        overlay.addEventListener('click', function(e) { if (e.target === overlay) closeEditor(); });
+        bindOverlayClose(overlay, closeEditor);
 
         doc.getElementById('rxEditorSave').addEventListener('click', function() {
           var ta = doc.getElementById('rxEditorTextarea');
@@ -14403,7 +14656,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         tmp.innerHTML = h;
         var modalEl = tmp.firstElementChild;
         doc.body.appendChild(modalEl);
-        modalEl.addEventListener('click', function(e) { if (e.target === modalEl) modalEl.remove(); });
+        bindOverlayClose(modalEl, function() { modalEl.remove(); });
         doc.getElementById('qcCloseBtn').addEventListener('click', function() { modalEl.remove(); });
         var optBtn = doc.getElementById('qcOptBtn');
         if (optBtn) {
@@ -14552,7 +14805,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         }
         loadFrame();
         /* 关闭逻辑 */
-        modalEl.addEventListener('click', function(e) { if (e.target === modalEl) modalEl.remove(); });
+        bindOverlayClose(modalEl, function() { modalEl.remove(); });
         doc.getElementById('mvuPreviewCloseBtn').addEventListener('click', function() { modalEl.remove(); });
       }
 
@@ -14656,7 +14909,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         tmp.innerHTML = h;
         var modalEl = tmp.firstElementChild;
         doc.body.appendChild(modalEl);
-        modalEl.addEventListener('click', function(e) { if (e.target === modalEl) modalEl.remove(); });
+        bindOverlayClose(modalEl, function() { modalEl.remove(); });
         doc.getElementById('wvCloseBtn').addEventListener('click', function() { modalEl.remove(); });
       }
 
@@ -14701,7 +14954,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         tmp.innerHTML = h;
         var modalEl = tmp.firstElementChild;
         doc.body.appendChild(modalEl);
-        modalEl.addEventListener('click', function(e) { if (e.target === modalEl) modalEl.remove(); });
+        bindOverlayClose(modalEl, function() { modalEl.remove(); });
         doc.getElementById('groupCloseBtn').addEventListener('click', function() { modalEl.remove(); });
         var toggles = modalEl.querySelectorAll('.gm-toggle');
         for (var i = 0; i < toggles.length; i++) {
@@ -14855,7 +15108,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         tmp.innerHTML = h;
         var optModalEl = tmp.firstElementChild;
         doc.body.appendChild(optModalEl);
-        optModalEl.addEventListener('click', function(e) { if (e.target === optModalEl) optModalEl.remove(); });
+        bindOverlayClose(optModalEl, function() { optModalEl.remove(); });
         doc.getElementById('optCloseBtn').addEventListener('click', function() { optModalEl.remove(); });
 
         var tags = doc.querySelectorAll('.opt-field-tag');
@@ -15193,6 +15446,120 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         }
       }
 
+      // ===== 🎨 状态栏风格预设弹窗 =====
+      var sbPresetSel = JSON.parse(JSON.stringify(SB_DEFAULT_PRESET));
+      function showStatusBarPresetModal() {
+        var overlay = doc.createElement('div');
+        overlay.className = 'pv-modal-overlay';
+        var modal = doc.createElement('div');
+        modal.className = 'pv-modal pv-modal-wide';
+        var chip = function(group, key, label, on, title) {
+          return '<button type="button" class="sbsp-chip' + (on ? ' on' : '') + '" data-sbsp="' + group + '" data-key="' + key + '" title="' + escAttr(title || label) + '">' + escHtml(label) + '</button>';
+        };
+        var h = '<div class="pv-modal-head"><span>🎨 状态栏生成预设</span><button class="icon-btn icon-btn-square" id="sbspClose">' + svgIcon('close', 15) + '</button></div>';
+        h += '<div class="pv-modal-body">';
+        h += '<div class="pv-modal-hint">勾选好之后点「生成状态栏」，写卡器会把这些要求拼成一段强约束提示词发给 AI。<br>目的：一次把风格/版式/模块/技术底线说清楚，避免"很简陋→反复改口→十几轮还修不好bug"。</div>';
+        h += '<div class="sbsp-section">视觉风格（单选）</div><div class="sbsp-chips">';
+        Object.keys(SB_STYLE_PRESETS).forEach(function(k) { h += chip('style', k, SB_STYLE_PRESETS[k].name, sbPresetSel.style === k, SB_STYLE_PRESETS[k].desc || ''); });
+        h += '</div>';
+        h += '<label class="pv-modal-label" id="sbspCustomStyleWrap" style="' + (sbPresetSel.style === 'custom' ? '' : 'display:none') + '">自定义风格描述' +
+             '<input type="text" id="sbspCustomStyle" placeholder="例：黑金奢华风，深色底 + 金色描边 + 衬线字体" value="' + escAttr(sbPresetSel.customStyle || '') + '"></label>';
+        h += '<div class="sbsp-section">版式（单选）</div><div class="sbsp-chips">';
+        Object.keys(SB_LAYOUT_PRESETS).forEach(function(k) { h += chip('layout', k, SB_LAYOUT_PRESETS[k].name, sbPresetSel.layout === k, SB_LAYOUT_PRESETS[k].desc); });
+        h += '</div>';
+        h += '<div class="sbsp-section">内容模块（多选）</div><div class="sbsp-chips">';
+        Object.keys(SB_MODULE_PRESETS).forEach(function(k) { h += chip('modules', k, SB_MODULE_PRESETS[k], (sbPresetSel.modules || []).indexOf(k) >= 0); });
+        h += '</div>';
+        h += '<div class="sbsp-section">动效（多选，可选）</div><div class="sbsp-chips">';
+        Object.keys(SB_FX_PRESETS).forEach(function(k) { h += chip('fx', k, SB_FX_PRESETS[k], (sbPresetSel.fx || []).indexOf(k) >= 0); });
+        h += '</div>';
+        h += '<div class="sbsp-section">技术硬约束（强烈建议全选，这些是"出bug"的根源）</div><div class="sbsp-rules">';
+        Object.keys(SB_HARD_RULES).forEach(function(k) {
+          h += '<label class="sbsp-rule"><input type="checkbox" data-sbrule="' + k + '"' + ((sbPresetSel.rules || []).indexOf(k) >= 0 ? ' checked' : '') + '><span>' + escHtml(SB_HARD_RULES[k]) + '</span></label>';
+        });
+        h += '</div>';
+        h += '<label class="pv-modal-label">额外要求（可选）<input type="text" id="sbspCustom" placeholder="例：数值超过80要变红；不要显示NPC列表" value="' + escAttr(sbPresetSel.custom || '') + '"></label>';
+        h += '</div>';
+        h += '<div class="pv-modal-foot">'
+          + '<button class="btn btn-ghost" id="sbspReset">恢复默认</button>'
+          + '<button class="btn btn-ghost" id="sbspPreview">查看提示词</button>'
+          + '<button class="btn btn-primary" id="sbspGo">生成状态栏</button>'
+          + '</div>';
+        modal.innerHTML = h;
+        overlay.appendChild(modal);
+        doc.body.appendChild(overlay);
+        var closeIt = function() { overlay.remove(); };
+        bindOverlayClose(overlay, closeIt);
+        modal.querySelector('#sbspClose').addEventListener('click', closeIt);
+        // 单选/多选 chip
+        modal.querySelectorAll('[data-sbsp]').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var group = this.getAttribute('data-sbsp');
+            var key = this.getAttribute('data-key');
+            if (group === 'style' || group === 'layout') {
+              modal.querySelectorAll('[data-sbsp="' + group + '"]').forEach(function(b) { b.classList.remove('on'); });
+              this.classList.add('on');
+              if (group === 'style') {
+                var wrap = modal.querySelector('#sbspCustomStyleWrap');
+                if (wrap) wrap.style.display = (key === 'custom') ? '' : 'none';
+              }
+            } else {
+              this.classList.toggle('on');
+            }
+          });
+        });
+        // 收集当前选择
+        var collect = function() {
+          var sel = { style: 'darkglass', layout: 'grid', modules: [], fx: [], rules: [], customStyle: '', custom: '' };
+          var onStyle = modal.querySelector('[data-sbsp="style"].on');
+          if (onStyle) sel.style = onStyle.getAttribute('data-key');
+          var onLayout = modal.querySelector('[data-sbsp="layout"].on');
+          if (onLayout) sel.layout = onLayout.getAttribute('data-key');
+          modal.querySelectorAll('[data-sbsp="modules"].on').forEach(function(b) { sel.modules.push(b.getAttribute('data-key')); });
+          modal.querySelectorAll('[data-sbsp="fx"].on').forEach(function(b) { sel.fx.push(b.getAttribute('data-key')); });
+          modal.querySelectorAll('[data-sbrule]').forEach(function(c) { if (c.checked) sel.rules.push(c.getAttribute('data-sbrule')); });
+          var cs = modal.querySelector('#sbspCustomStyle');
+          var cu = modal.querySelector('#sbspCustom');
+          sel.customStyle = cs ? cs.value.trim() : '';
+          sel.custom = cu ? cu.value.trim() : '';
+          return sel;
+        };
+        modal.querySelector('#sbspReset').addEventListener('click', function() {
+          sbPresetSel = JSON.parse(JSON.stringify(SB_DEFAULT_PRESET));
+          closeIt();
+          showStatusBarPresetModal();
+        });
+        modal.querySelector('#sbspPreview').addEventListener('click', function() {
+          sbPresetSel = collect();
+          try { saveToStorage(); } catch(_) {}
+          var txt = buildStatusBarPrompt(sbPresetSel);
+          var ov2 = doc.createElement('div');
+          ov2.className = 'pv-modal-overlay';
+          var m2 = doc.createElement('div');
+          m2.className = 'pv-modal pv-modal-wide';
+          m2.innerHTML = '<div class="pv-modal-head"><span>📝 将发送的提示词（可复制后自行微调）</span><button class="icon-btn icon-btn-square" id="spClose">' + svgIcon('close', 15) + '</button></div>' +
+            '<div class="pv-modal-body"><textarea id="spText" style="width:100%;min-height:46vh;font-size:.8em;line-height:1.6;padding:10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-soft);color:var(--ink);font-family:inherit;resize:vertical">' + escHtml(txt) + '</textarea></div>' +
+            '<div class="pv-modal-foot"><button class="btn btn-ghost" id="spClose2">关闭</button></div>';
+          ov2.appendChild(m2);
+          doc.body.appendChild(ov2);
+          var c2 = function() { ov2.remove(); };
+          bindOverlayClose(ov2, c2);
+          m2.querySelector('#spClose').addEventListener('click', c2);
+          m2.querySelector('#spClose2').addEventListener('click', c2);
+        });
+        modal.querySelector('#sbspGo').addEventListener('click', function() {
+          sbPresetSel = collect();
+          try { saveToStorage(); } catch(_) {}
+          var txt = buildStatusBarPrompt(sbPresetSel);
+          closeIt();
+          var input = doc.getElementById('chatInput');
+          if (!input) return;
+          input.value = txt;
+          try { updateCharCount(); updateSendBtnPulse(); } catch(_) {}
+          handleSend();
+        });
+      }
+
       // ===== 预览渲染 =====
       /* 改进V：renderPreview防抖——合并连续渲染请求（如批量更新entries时），避免16+调用点全量重建卡顿 */
       var _renderPreviewTimer = null;
@@ -15203,6 +15570,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       var pvMultiSelect = false;  // 多选模式
       var pvSelectedIdx = {};     // 多选模式下已选中的条目索引
       var pvOpenIdx = {};         // 条目名 → 是否展开（重渲染后保持展开状态）
+      var pvFocusIdx = -1;        // 最近点击过的条目索引（Alt+↑/↓ 用它来上下移动）
+      // 创作模式：'create' 从零创作 / 'revise' 修改现有卡（导入卡后自动进入）
+      var workMode = 'create';
       function renderPreview() {
         if (_renderPreviewTimer) clearTimeout(_renderPreviewTimer);
         _renderPreviewTimer = setTimeout(_renderPreviewImpl, 80);
@@ -15382,7 +15752,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           + '<input type="text" class="pv-entry-search" id="pvEntrySearch" placeholder="搜索条目名/内容…" value="' + escAttr(_pvQ) + '" title="输入关键字即时筛选下方条目">'
           + '<button type="button" class="pv-mini-btn" data-pv-list-action="expand" title="展开全部条目">展开</button>'
           + '<button type="button" class="pv-mini-btn" data-pv-list-action="collapse" title="折叠全部条目">折叠</button>'
-          + '<button type="button" class="pv-mini-btn' + (pvMultiSelect ? ' on' : '') + '" data-pv-list-action="multi" title="多选：批量删除 / 批量改常驻 / 批量导出">多选</button>'
+          + '<button type="button" class="pv-mini-btn' + (pvMultiSelect ? ' on' : '') + '" data-pv-list-action="multi" title="多选：批量删除 / 批量改常驻 / 批量导出；多选后拖动会把整批一起移动">多选</button>'
           + '<button type="button" class="pv-mini-btn' + (pvSyncOrder ? ' on' : '') + '" data-pv-list-action="sync-order" title="开启后，拖动排序会同步写入条目的优先级(insertion_order)，让酒馆里的顺序也跟着变；MVU条目不受影响">优先级同步：' + (pvSyncOrder ? '开' : '关') + '</button>'
           + '<button type="button" class="pv-mini-btn" data-pv-list-action="batch-keys" title="给所有没有触发词的触发条目一次性补上触发词">批量补触发词</button>'
           + '<select class="pv-mini-select" id="pvTplSelect" title="从模板新建条目（会自动填好内容骨架和 ST 参数）">' + _tplOptions + '</select>'
@@ -15706,7 +16076,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         overlay.appendChild(modal);
         doc.body.appendChild(overlay);
         var closeIt = function() { overlay.remove(); };
-        overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeIt(); });
+        bindOverlayClose(overlay, closeIt);
         modal.querySelector('#pvImpClose').addEventListener('click', closeIt);
         modal.querySelector('#pvImpCancel').addEventListener('click', closeIt);
         var fileEl = modal.querySelector('#pvImpFile');
@@ -15817,7 +16187,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         overlay.appendChild(modal);
         doc.body.appendChild(overlay);
         var closeIt = function() { overlay.remove(); };
-        overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeIt(); });
+        bindOverlayClose(overlay, closeIt);
         modal.querySelector('#fmClose').addEventListener('click', closeIt);
         modal.querySelector('#fmClose2').addEventListener('click', closeIt);
       }
@@ -15924,18 +16294,34 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         saveToStorage();
         if (msg) showToast(msg, 'success');
       }
-      // 拖拽排序：把 fromIdx 条目移动到 toIdx 之前/之后
-      function pvReorderEntry(fromIdx, toIdx, insertBefore) {
+      // 拖拽排序：把 fromIdxs 这批条目整体移动到 toIdx 之前/之后（支持多选批量拖动）
+      // 返回实际移动的条目数量（0 = 没动）
+      function pvReorderEntries(fromIdxs, toIdx, insertBefore) {
         var arr = pvEntriesArr();
-        if (isNaN(fromIdx) || isNaN(toIdx)) return false;
-        if (fromIdx < 0 || fromIdx >= arr.length) return false;
-        if (toIdx < 0 || toIdx >= arr.length) return false;
-        if (fromIdx === toIdx) return false;
-        var item = arr.splice(fromIdx, 1)[0];
-        var target = (fromIdx < toIdx) ? (insertBefore ? toIdx - 1 : toIdx) : (insertBefore ? toIdx : toIdx + 1);
-        if (target < 0) target = 0;
-        if (target > arr.length) target = arr.length;
-        arr.splice(target, 0, item);
+        if (isNaN(toIdx) || toIdx < 0 || toIdx >= arr.length) return 0;
+        var moving = (Array.isArray(fromIdxs) ? fromIdxs : [fromIdxs])
+          .map(Number).filter(function(i) { return !isNaN(i) && i >= 0 && i < arr.length; });
+        // 去重
+        var seen = {}, uniq = [];
+        moving.forEach(function(i) { if (!seen[i]) { seen[i] = true; uniq.push(i); } });
+        moving = uniq.sort(function(a, b) { return a - b; });
+        if (!moving.length) return 0;
+        // 落点本身就在被拖动集合里 → 等价于没动
+        if (moving.indexOf(toIdx) >= 0) return 0;
+        var anchor = arr[toIdx];                  // 以"落点那一行的条目对象"为锚点
+        if (!anchor) return 0;
+        var items = moving.map(function(i) { return arr[i]; });
+        var rest = [];
+        for (var i = 0; i < arr.length; i++) { if (moving.indexOf(i) < 0) rest.push(arr[i]); }
+        var ai = rest.indexOf(anchor);
+        if (ai < 0) return 0;
+        var insertAt = insertBefore ? ai : ai + 1;
+        if (insertAt < 0) insertAt = 0;
+        if (insertAt > rest.length) insertAt = rest.length;
+        rest.splice.apply(rest, [insertAt, 0].concat(items));
+        // 原地替换数组内容（保持 cardData.character_book.entries 的引用不变）
+        arr.length = 0;
+        for (var j = 0; j < rest.length; j++) arr.push(rest[j]);
         // 可选：同步写入优先级，让酒馆世界书里的顺序也跟着变（MVU条目保持原有优先级不动）
         if (pvSyncOrder) {
           var n = arr.length;
@@ -15947,7 +16333,11 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             arr[k].extensions.order = newOrder;
           }
         }
-        return true;
+        return items.length;
+      }
+      // 单条拖动（兼容旧调用/测试）
+      function pvReorderEntry(fromIdx, toIdx, insertBefore) {
+        return pvReorderEntries([fromIdx], toIdx, insertBefore) > 0;
       }
       // 参数直改：comment / position / depth / order / keys
       function pvSetEntryField(idx, field, rawValue) {
@@ -16063,7 +16453,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         overlay.appendChild(modal);
         doc.body.appendChild(overlay);
         var closeIt = function() { overlay.remove(); };
-        overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeIt(); });
+        bindOverlayClose(overlay, closeIt);
         modal.querySelector('#pvNewClose').addEventListener('click', closeIt);
         modal.querySelector('#pvNewCancel').addEventListener('click', closeIt);
         var inputEl = modal.querySelector('#pvNewComment');
@@ -16308,9 +16698,26 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           });
         }
 
-        // ========== 🆕 拖拽排序（拖动左侧 ⠿ 把手）==========
+        // ========== 🆕 拖拽排序（拖动左侧 ⠿ 把手；支持多选整批拖动 + 拖到边缘自动滚动）==========
         var dragFrom = -1;
+        var dragSet = [];                 // 本次实际要移动的条目索引（多选时是整批）
         var dragRows = body.querySelectorAll('.pv-entry[data-pv-entry-row]');
+        // 拖拽到面板上下边缘时自动滚动（HTML5 drag 默认不会滚动容器，条目一多就很难拖）
+        var scrollHost = doc.getElementById('previewBody');
+        var _dragScrollTimer = null, _dragScrollDir = 0;
+        var _stopDragScroll = function() {
+          _dragScrollDir = 0;
+          if (_dragScrollTimer) { clearInterval(_dragScrollTimer); _dragScrollTimer = null; }
+        };
+        var _setDragScroll = function(dir) {
+          if (!scrollHost) return;
+          _dragScrollDir = dir;
+          if (_dragScrollTimer || !dir) return;
+          _dragScrollTimer = setInterval(function() {
+            if (!_dragScrollDir || !scrollHost) return;
+            scrollHost.scrollTop += _dragScrollDir * 22;
+          }, 40);
+        };
         var clearDropMarks = function() {
           var all = body.querySelectorAll('.pv-entry');
           for (var ci = 0; ci < all.length; ci++) all[ci].classList.remove('pv-drop-top', 'pv-drop-bottom');
@@ -16323,22 +16730,64 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               if (key) { if (row.open) pvOpenIdx[key] = true; else delete pvOpenIdx[key]; }
             });
             var handle = row.querySelector('.pv-entry-drag');
+            // 记录最近操作的条目：Alt+↑/↓ 用它做上下移动（免得条目多时只能一条条拖）
+            row.addEventListener('click', function() {
+              var fi = parseInt(row.getAttribute('data-pv-entry-row'), 10);
+              if (!isNaN(fi)) pvFocusIdx = fi;
+            });
+            // Alt+↑/↓ 上下移动条目（只在预览面板里、且焦点不在输入框时生效）
+            if (!doc.__shizhiAltMoveBound) {
+              doc.__shizhiAltMoveBound = true;
+              doc.addEventListener('keydown', function(e) {
+                if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+                var tg = String((e.target && e.target.tagName) || '').toLowerCase();
+                if (tg === 'input' || tg === 'textarea' || tg === 'select') return;
+                var arr = pvEntriesArr();
+                var fi = pvFocusIdx;
+                if (fi == null || fi < 0 || fi >= arr.length) return;
+                e.preventDefault();
+                var moved = 0;
+                if (e.key === 'ArrowUp') { if (fi > 0) moved = pvReorderEntries([fi], fi - 1, true); }
+                else { if (fi < arr.length - 1) moved = pvReorderEntries([fi], fi + 1, false); }
+                if (moved) {
+                  pvFocusIdx = (e.key === 'ArrowUp') ? fi - 1 : fi + 1;
+                  pvAfterEntryChange('↕ 已' + (e.key === 'ArrowUp' ? '上移' : '下移') + '条目（Alt+↑/↓ 可连续操作）');
+                }
+              });
+            }
             if (!handle) return;
             // 点把手不要触发展开/折叠
             handle.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); });
             handle.addEventListener('mousedown', function(e) { e.stopPropagation(); });
             handle.addEventListener('dragstart', function(e) {
               dragFrom = parseInt(row.getAttribute('data-pv-entry-row'), 10);
+              // 拖的这条如果已经在多选里 → 整批一起移动
+              if (pvMultiSelect && pvSelectedIdx[dragFrom]) {
+                dragSet = Object.keys(pvSelectedIdx).filter(function(k) { return pvSelectedIdx[k]; }).map(Number);
+              } else {
+                dragSet = [dragFrom];
+              }
               row.classList.add('pv-dragging');
+              // 整批移动时，被选中的其它行也标记一下，让用户看清在拖什么
+              if (dragSet.length > 1) {
+                var all = body.querySelectorAll('.pv-entry[data-pv-entry-row]');
+                for (var ai = 0; ai < all.length; ai++) {
+                  var iIdx = parseInt(all[ai].getAttribute('data-pv-entry-row'), 10);
+                  if (dragSet.indexOf(iIdx) >= 0) all[ai].classList.add('pv-dragging');
+                }
+              }
               try {
                 e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', String(dragFrom));
+                e.dataTransfer.setData('text/plain', dragSet.length > 1 ? ('多选 ' + dragSet.length + ' 条') : String(dragFrom));
               } catch(_) {}
             });
             handle.addEventListener('dragend', function() {
-              row.classList.remove('pv-dragging');
+              var all = body.querySelectorAll('.pv-entry');
+              for (var di = 0; di < all.length; di++) all[di].classList.remove('pv-dragging');
               clearDropMarks();
+              _stopDragScroll();
               dragFrom = -1;
+              dragSet = [];
             });
             row.addEventListener('dragover', function(e) {
               if (dragFrom < 0) return;
@@ -16348,6 +16797,14 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               var isTop = (e.clientY - rect.top) < rect.height / 2;
               row.classList.toggle('pv-drop-top', isTop);
               row.classList.toggle('pv-drop-bottom', !isTop);
+              // 边缘自动滚动
+              if (scrollHost) {
+                var hostRect = scrollHost.getBoundingClientRect();
+                var EDGE = 80;
+                if (e.clientY < hostRect.top + EDGE) _setDragScroll(-1);
+                else if (e.clientY > hostRect.bottom - EDGE) _setDragScroll(1);
+                else _setDragScroll(0);
+              }
             });
             row.addEventListener('dragleave', function() {
               row.classList.remove('pv-drop-top', 'pv-drop-bottom');
@@ -16359,9 +16816,12 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
               var rect = row.getBoundingClientRect();
               var isTop = (e.clientY - rect.top) < rect.height / 2;
               clearDropMarks();
-              var moved = pvReorderEntry(dragFrom, toIdx, isTop);
+              _stopDragScroll();
+              var moving = (dragSet && dragSet.length) ? dragSet : [dragFrom];
+              var movedCount = pvReorderEntries(moving, toIdx, isTop);
               dragFrom = -1;
-              if (moved) pvAfterEntryChange('↕ 已调整条目顺序');
+              dragSet = [];
+              if (movedCount > 0) pvAfterEntryChange(movedCount > 1 ? ('↕ 已整体移动 ' + movedCount + ' 条条目') : '↕ 已调整条目顺序');
             });
           })(dragRows[dri]);
         }
@@ -16604,7 +17064,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         modal.appendChild(textareaWrap);
         modal.appendChild(footer);
         overlay.appendChild(modal);
-        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+        bindOverlayClose(overlay, function() { overlay.remove(); });
         doc.body.appendChild(overlay);
         try { textarea.focus(); } catch(_) {}
       }
