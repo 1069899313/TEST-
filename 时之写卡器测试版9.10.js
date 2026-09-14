@@ -1,6 +1,6 @@
 (function() {
 /* ============================================================================
- * 时之写卡器 · Tavern Helper 脚本（整理版2026.9.14 18:54）
+ * 时之写卡器 · Tavern Helper 脚本（整理版2026.9.14 19:29）
  * ----------------------------------------------------------------------------
  * 项目类型：后台脚本（Tavern Helper Script · 相当于模板里的 index.ts）
  * 运行形式：单文件 JS，导入到酒馆脚本库，点击脚本按钮打开写卡器
@@ -406,6 +406,24 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
 .sbsp-rule{display:flex;align-items:flex-start;gap:8px;font-size:.76em;color:var(--ink-soft);line-height:1.6;padding:7px 10px;background:var(--surface-soft);border:1px solid var(--line-soft);border-radius:var(--radius-sm);cursor:pointer;transition:all .16s}
 .sbsp-rule:hover{border-color:var(--accent-border)}
 .sbsp-rule input{margin-top:2px;accent-color:var(--accent);flex-shrink:0}
+/* ===== 状态栏预设：精确参数 / 参考HTML ===== */
+.sbsp-params{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sbsp-param{display:inline-flex;align-items:center;gap:5px;font-size:.76em;color:var(--ink-soft);background:var(--surface-soft);border:1px solid var(--line-soft);border-radius:999px;padding:4px 10px}
+.sbsp-param input[type=color]{width:26px;height:20px;padding:0;border:1px solid var(--line);border-radius:5px;background:none;cursor:pointer}
+.sbsp-param input[type=text],.sbsp-param select{font-family:inherit;font-size:1em;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:2px 6px;outline:none}
+.sbsp-param .sbsp-clear{font-family:inherit;font-size:.86em;padding:1px 6px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+.sbsp-param[data-on] .sbsp-clear{color:var(--terra-text);border-color:var(--terra-border)}
+#sbspRefText{width:100%;font-family:var(--font-mono);font-size:.76em;line-height:1.6;padding:9px 11px;color:var(--ink);background:var(--surface-soft);border:1px solid var(--line);border-radius:var(--radius-sm);resize:vertical;outline:none}
+#sbspRefText:focus{border-color:var(--accent-border-strong);box-shadow:0 0 0 3px var(--accent-soft)}
+.sbsp-ref-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:7px 0}
+.sbsp-ref-actions input[type=text]{font-family:inherit;font-size:.78em;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);outline:none}
+.sbsp-ref-list{display:flex;flex-direction:column;gap:5px}
+.sbsp-ref-item{display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--surface-soft);border:1px solid var(--line-soft);border-left:3px solid var(--sage-border-strong);border-radius:var(--radius-sm);font-size:.78em}
+.sbsp-ref-name{flex:1;min-width:80px;color:var(--accent-deep);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbsp-ref-size{color:var(--muted);font-size:.92em;white-space:nowrap}
+.sbsp-ref-item .pv-mini-btn{font-size:.72em;padding:4px 9px}
+.sbsp-ref-total{font-size:.72em;color:var(--muted);padding:3px 2px}
+.sbsp-ref-empty{font-size:.76em;color:var(--muted);font-style:italic;padding:6px 2px}
 /* ===== 工作模式选择 ===== */.wm-choice{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;padding:13px 15px;border-radius:var(--radius);border:1px solid var(--line);background:var(--surface-soft);cursor:pointer;font-family:inherit;transition:all .18s cubic-bezier(.4,0,.2,1)}
 .wm-choice:hover{border-color:var(--accent-border-strong);background:var(--surface);box-shadow:0 6px 20px rgba(79,70,229,.12);transform:translateY(-1px)}
 .wm-choice-title{font-size:.94em;font-weight:600;color:var(--accent-deep)}
@@ -1620,6 +1638,10 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
   // 用户明确说"重写/重做/精简/压缩"时自动跳过，避免和用户意图对着干。
   var contentGuardMode = 'merge';            // 'merge' | 'warn' | 'off'
   var _lastUserInputMirror = '';             // handleSend 里同步一份用户最近输入，供顶层函数判断意图
+  // ===== 🛠️ 工作模式：'create' 从零创作 / 'revise' 修改现有卡 =====
+  // ⚠️必须声明在顶层：buildPrompt() 是顶层函数，要读它来决定注入哪套行为准则。
+  //   （曾经误把它声明在 openEditor() 内部 → 一发消息就 "workMode is not defined"，整个对话失败）
+  var workMode = 'create';
 
   function _guardSkipByUserIntent() {
     var txt = String(_lastUserInputMirror || '');
@@ -2098,8 +2120,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '- 第5条 [mvu_update]变量输出格式（constant=true常驻）：≤600字。JSON Patch模板本身约300字，rule字段精炼在10行以内\n' +
     '- 第6条 [mvu_update]变量输出格式强调（constant=true，默认enabled=false）：≤300字，固定提醒模板\n' +
     '- 第7条 <状态栏>占位符提醒（constant=true常驻）：≤100字，简单提醒语句\n' +
-    '- 第8条 正则6 [美化]MVU状态栏（regex_scripts）：≤3000字，完整HTML状态栏+渲染函数\n' +
-    '- 核心常驻Token（第3/4/5条 constant=true）合计≤1200字；超出时优先精简"变量更新规则"，再精简"变量输出格式"的rule字段。附加条目单独算Token预算，每条≤600字，仅在用户明确要求时生成。\n\n' +
+    '- 第8条 正则6 [美化]MVU状态栏（regex_scripts）：**篇幅不设上限**（完整 HTML + CSS + 渲染函数，写长一点完全正常，别为了"精简"砍样式或功能）；要求结构完整、标签闭合、能直接跑起来\n' +
+    '- 核心常驻Token（第3/4/5条 constant=true）尽量精炼（不设硬上限）；超出直觉长度时优先精简"变量更新规则"，再精简"变量输出格式"的rule字段。附加条目单独算Token预算，仅在用户明确要求时生成。\n\n' +
     '**【通用多阶段状态变量生成指导】**：\n' +
     '- 适用场景：好感度/关系阶段、剧情进度/章节分支、系统模式/状态切换、属性等级/境界突破 等任意需要分阶段/分档位/分状态的变量体系。\n' +
     '- 设计流程（仅用户明确要求分阶段时执行）：①阶段划分：确认阶段数量、每个阶段的触发阈值/条件、阶段命名；②字段设计：核心判定变量、阶段标记变量、只读派生变量（$开头，AI只读不更新）；③切换规则：阶段跳转的触发条件、联动变更的字段、边界兜底；④注入逻辑（可选）：不同阶段是否注入不同的世界书内容/提示规则。\n' +
@@ -2840,7 +2862,14 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '        第1步：请用户提供MVU变量结构脚本（zod schema代码块），识别变量路径/核心字段/数据组织方式\n' +
     '        第2步：询问用户想显示哪些变量（可按类别分组：核心状态/世界状态/角色状态等）\n' +
     '        第3步：询问UI风格（简约黑色卡片/赛博朋克霓虹/古风水墨/科幻全息/游戏UI仪表盘/极简线条，或"简单就行"），按用户要求自由设计\n' +
-    '        第4步：进入代码生成（⚠️使用下方的5步分模块流程；⚠️严格每次只生成一个模块，禁止一次生成多个模块，禁止一口气生成完整状态栏）\n' +
+    '        第4步：进入代码生成（⚠️**一次性输出完整状态栏 HTML**——写卡器会整体提取保存为正则6。不要分模块、不要只给一部分、不要问"要不要继续"）\n' +
+    '\n' +
+    '      ⚠️⚠️⚠️【状态栏生成方式（最新规则，覆盖下面所有"分5模块/逐模块/一次一个模块"的旧描述）】\n' +
+    '      · 状态栏 = **一次输出完整 HTML 文档**：<head> 内 <style>、<body> 内 <script type="module">，含完整 CSS 与渲染函数\n' +
+    '      · **不要分成多个代码块、不要只输出配色/骨架/CSS 之类的单个模块**；写卡器需要的是能直接跑起来的整份 HTML\n' +
+    '      · **篇幅不设上限**：宁可长而完整，也不要短而简陋；复杂界面写到一两万字都正常\n' +
+    '      · 只输出**一个** ```html 代码块，前后不要解释文字\n' +
+    '      · 唯一例外：用户明确说"先只做配色/先给我骨架"时，才单独输出那一部分\n' +
     '\n' +
     '      ╔══════════════════════════════════════════════════════════════╗\n' +
     '      ║  ⚠️核心机制：写卡器后台管理 + 5个空槽位 + 逐个填入 + 拼接合并  ║\n' +
@@ -3074,9 +3103,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     '        · Step 7由写卡器自动拼接，AI不需要重新输出代码，避免输出长度限制\n' +
     '        · 超大型状态栏建议：把变量按模块分组（核心状态/世界状态/角色关系/物品栏/技能栏/任务进度等），每个模块独立成块，便于扩展\n' +
     '        · ⚠️每个Step生成前，AI需在文字中简述"我将对照Step X的XXX来确保一致"，然后再输出代码块\n' +
-    '        · ⚠️不管小型还是大型状态栏，都必须走完Step 2-6全部5个模块\n' +
-    '        · ⚠️5个模块全部齐全后写卡器自动拼接保存，确保最终状态栏结构完整、样式完整、逻辑完整\n' +
-    '        · ⚠️大型状态栏的优势：每个Step可以写很多代码（上百行），不受单次输出限制，复杂度由Step内部承担\n' +
+    '        · ⚠️【最新规则】状态栏一次性输出完整 HTML（写卡器整体提取保存），不要分模块、不要一问一答式地挤；下面的 Step 2-6 只当作"设计清单"参考，不作为输出节奏\n' +
+    '        · ⚠️写卡器会把你输出的整份 HTML 保存为正则6「[美化]MVU状态栏」，所以必须是一份完整、能直接跑的文档\n' +
+    '        · ⚠️大型状态栏完全没问题：CSS 写几百行、渲染函数写几百行都很正常，篇幅不设上限\n' +
     '\n' +
     '      ⚠️通用关键实现要求（每个Step都适用，用户模板标准对齐）：\n' +
     '        · 可用库：jquery、jqueryui、lodash、yaml、zod、toastr（无需import，直接使用）\n' +
@@ -5124,13 +5153,30 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     modules: ['profile', 'stats', 'inventory', 'relation'],
     fx: ['tween', 'hover'],
     rules: ['nodep', 'getvar', 'fallback', 'norecur', 'sync', 'mobile', 'safe'],
-    customStyle: '',
-    custom: ''
+    // 精确参数（留空=不限制，交给AI按风格自由发挥）
+    customStyle: '',      // 自定义风格描述（多行）
+    custom: '',           // 额外要求（多行，不限字数）
+    colorMain: '',        // 主色 #rrggbb
+    colorSub: '',         // 辅色/点缀色
+    colorText: '',        // 正文颜色
+    radius: '',           // 圆角
+    fontBase: '',         // 基准字号 px
+    maxWidth: '',         // 面板最大宽度 px
+    fontFamily: '',       // 字体族
+    refs: []              // 参考HTML：[{ name, html }]，数量不限
+  };
+  // 字体族选项
+  var SB_FONT_FAMILIES = {
+    '': '不指定（按风格自选）',
+    system: '系统默认无衬线（-apple-system, "Segoe UI", "Microsoft YaHei", sans-serif）',
+    serif: '衬线（Georgia, "Songti SC", "SimSun", serif）',
+    mono: '等宽（"JetBrains Mono", Consolas, monospace）',
+    round: '圆体（"Yuanti SC", "PingFang SC", "Microsoft YaHei", sans-serif）'
   };
   // 把勾选状态拼成一段高约束提示词
   function buildStatusBarPrompt(sel) {
     sel = sel || SB_DEFAULT_PRESET;
-    var out = '请生成（需要时也可以重做）MVU 状态栏 HTML —— 写卡器会把它保存为正则6「[美化]MVU状态栏」。\n\n';
+    var out = '请生成（需要时也可以重做）MVU 状态栏 HTML —— 写卡器会把它整体保存为正则6「[美化]MVU状态栏」。\n\n';
     var styleObj = SB_STYLE_PRESETS[sel.style];
     var styleName = styleObj ? styleObj.name : '自定义';
     var styleDesc = (sel.style === 'custom' && sel.customStyle) ? sel.customStyle : (styleObj ? styleObj.desc : '');
@@ -5141,7 +5187,29 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
     out += '【必须包含的模块】\n' + (mods.length ? mods.map(function(m) { return '· ' + m; }).join('\n') : '· （未指定，按变量内容自行组织）') + '\n';
     var fxs = (sel.fx || []).map(function(k) { return SB_FX_PRESETS[k]; }).filter(Boolean);
     if (fxs.length) out += '【动效】\n' + fxs.map(function(f) { return '· ' + f; }).join('\n') + '\n';
-    if (sel.custom) out += '【额外要求】' + sel.custom + '\n';
+    // 精确参数（只在填了的情况下才写进去；没填就不限制，避免又把 AI 框死）
+    var exact = [];
+    if (sel.colorMain) exact.push('· 主色：' + sel.colorMain + '（用于强调、标题、进度条主色）');
+    if (sel.colorSub) exact.push('· 辅色/点缀色：' + sel.colorSub + '（用于次要信息、分隔、悬浮态）');
+    if (sel.colorText) exact.push('· 正文文字色：' + sel.colorText);
+    if (sel.radius) exact.push('· 圆角：' + sel.radius + 'px');
+    if (sel.fontBase) exact.push('· 基准字号：' + sel.fontBase + 'px（其余字号按比例用 em/clamp 缩放）');
+    if (sel.maxWidth) exact.push('· 面板最大宽度：' + sel.maxWidth + 'px（窄屏自适应收缩）');
+    if (sel.fontFamily && SB_FONT_FAMILIES[sel.fontFamily]) exact.push('· 字体：' + SB_FONT_FAMILIES[sel.fontFamily]);
+    if (exact.length) out += '【精确参数（按此数值实现，不要自行更改）】\n' + exact.join('\n') + '\n';
+    if (sel.custom) out += '【额外要求（用户原话，优先级很高，必须满足）】\n' + sel.custom + '\n';
+    // 参考HTML：只参考视觉与结构，不照抄字段
+    var refs = Array.isArray(sel.refs) ? sel.refs.filter(function(r) { return r && r.html && String(r.html).trim(); }) : [];
+    if (refs.length) {
+      out += '\n【参考状态栏（共 ' + refs.length + ' 份，用来对齐"好看"的标准）】\n' +
+        '要求：**认真参考它们的配色方案、排版结构、信息层级、圆角阴影等视觉细节**，做出同等或更好的观感；\n' +
+        '但**不要照抄里面的变量名/字段路径/具体文案**——本卡用哪些变量以上面的模块清单和变量结构脚本为准。\n';
+      refs.forEach(function(r, i) {
+        var nm = r.name ? ('（' + r.name + '）') : '';
+        out += '\n── 参考' + (i + 1) + nm + ' ──\n' + String(r.html).trim() + '\n';
+      });
+      out += '\n（参考部分结束。请综合以上参考的视觉水平，输出本卡的完整状态栏 HTML。）\n';
+    }
     var rules = (sel.rules || []).map(function(k) { return SB_HARD_RULES[k]; }).filter(Boolean);
     out += '\n【技术硬约束（必须全部满足，否则状态栏会出bug）】\n' +
       (rules.length ? rules.map(function(r, i) { return (i + 1) + '. ' + r; }).join('\n') : '（本次未启用硬约束，请自行保证不出错）') + '\n';
@@ -5153,6 +5221,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       '\n【输出要求】\n' +
       '· 只输出**一个**完整 HTML 文档代码块（```html 开头）：<head> 内 <style>、<body> 内 <script type="module">\n' +
       '· 不要 <!doctype html>、不要 <html> 根标签；不要输出解释文字，不要分多段\n' +
+      '· **篇幅不设任何上限**：CSS 写几百行、渲染函数写几百行都很正常，宁可长而完整，也不要短而简陋\n' +
       '· 先保证结构完整、标签闭合、能直接跑起来，再谈美化；宁可朴素也不要有未闭合标签或未定义变量';
     return out;
   }
@@ -9199,7 +9268,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
                   '</div>' +
                   '<div class="chat-input-foot">' +
                     '<span class="chat-input-hint" id="chatInputHint"><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> 发送 · <span class="kbd">Enter</span> 换行</span>' +
-                    '<span class="chat-input-char-count" id="charCount">0 / 2000</span>' +
+                    '<span class="chat-input-char-count" id="charCount">0 字</span>' +
                   '</div>' +
                 '</div>' +
               '</div>' +
@@ -10209,10 +10278,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         var cnt = doc.getElementById('charCount');
         if (!input || !cnt) return;
         var len = input.value.length;
-        cnt.textContent = len + ' / 2000';
+        // ⚠️不设字数上限：只显示当前长度，不做截断、不做"超限"警告
+        cnt.textContent = len + ' 字';
         cnt.className = 'chat-input-char-count';
-        if (len > 1500) cnt.classList.add('warn');
-        if (len > 1900) cnt.classList.add('over');
       }
 
       function updateSendBtnPulse() {
@@ -11195,7 +11263,9 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           ensureFixedMvuAssetsInCardData();
           // 让AI生成完整状态栏HTML（统一模板，写卡器自动提取保存）
           if (input) {
-            input.value = '请根据已配置的MVU变量系统，生成状态栏HTML。输出一个完整的HTML文档（含CSS和JS），使用 populateCharacterData + getAllVariables + eventOn(Mvu.events.VARIABLE_UPDATE_ENDED) + errorCatched 标准模式。';
+            // 🎨 直接使用「状态栏风格预设」拼出的完整规格提示词（风格/版式/模块/技术硬约束一次说清），
+            //    比原来那句单行要求强得多，能显著减少"很简陋 → 反复改口 → 十几轮修bug"的返工
+            input.value = buildStatusBarPrompt(sbPresetSel);
             handleSend();
           }
           return;
@@ -15462,8 +15532,8 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         h += '<div class="sbsp-section">视觉风格（单选）</div><div class="sbsp-chips">';
         Object.keys(SB_STYLE_PRESETS).forEach(function(k) { h += chip('style', k, SB_STYLE_PRESETS[k].name, sbPresetSel.style === k, SB_STYLE_PRESETS[k].desc || ''); });
         h += '</div>';
-        h += '<label class="pv-modal-label" id="sbspCustomStyleWrap" style="' + (sbPresetSel.style === 'custom' ? '' : 'display:none') + '">自定义风格描述' +
-             '<input type="text" id="sbspCustomStyle" placeholder="例：黑金奢华风，深色底 + 金色描边 + 衬线字体" value="' + escAttr(sbPresetSel.customStyle || '') + '"></label>';
+        h += '<label class="pv-modal-label" id="sbspCustomStyleWrap" style="' + (sbPresetSel.style === 'custom' ? '' : 'display:none') + '">自定义风格描述（不限字数，可以把颜色/材质/氛围/参考作品都写进来）' +
+             '<textarea id="sbspCustomStyle" rows="3" placeholder="例：黑金奢华风：深色底#12100e + 金色描边#d4af37 + 衬线标题 + 细密纹理，整体像高级酒馆的账本">' + escHtml(sbPresetSel.customStyle || '') + '</textarea></label>';
         h += '<div class="sbsp-section">版式（单选）</div><div class="sbsp-chips">';
         Object.keys(SB_LAYOUT_PRESETS).forEach(function(k) { h += chip('layout', k, SB_LAYOUT_PRESETS[k].name, sbPresetSel.layout === k, SB_LAYOUT_PRESETS[k].desc); });
         h += '</div>';
@@ -15473,12 +15543,43 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         h += '<div class="sbsp-section">动效（多选，可选）</div><div class="sbsp-chips">';
         Object.keys(SB_FX_PRESETS).forEach(function(k) { h += chip('fx', k, SB_FX_PRESETS[k], (sbPresetSel.fx || []).indexOf(k) >= 0); });
         h += '</div>';
+        // ===== 精确参数（留空 = 不限制，交给 AI 自由发挥）=====
+        h += '<div class="sbsp-section">精确参数（留空即不限制）</div>';
+        h += '<div class="sbsp-params">';
+        var cw = function(id, field, val, def) {
+          return '<label class="sbsp-param" data-colorwrap="' + field + '"' + (val ? ' data-on="1"' : '') + '>' + id +
+            '<input type="color" id="sbspColor' + field.charAt(0).toUpperCase() + field.slice(1) + '" value="' + escAttr(val || def) + '">' +
+            '<button type="button" class="sbsp-clear" data-clear="' + field + '">清空</button></label>';
+        };
+        h += cw('主色', 'colorMain', sbPresetSel.colorMain, '#4f46e5');
+        h += cw('辅色', 'colorSub', sbPresetSel.colorSub, '#94a3b8');
+        h += cw('文字色', 'colorText', sbPresetSel.colorText, '#e2e8f0');
+        h += '<label class="sbsp-param">圆角<input type="text" id="sbspRadius" placeholder="如 14" value="' + escAttr(sbPresetSel.radius || '') + '" style="width:64px"></label>';
+        h += '<label class="sbsp-param">基准字号<input type="text" id="sbspFontBase" placeholder="如 14" value="' + escAttr(sbPresetSel.fontBase || '') + '" style="width:64px"></label>';
+        h += '<label class="sbsp-param">面板最大宽<input type="text" id="sbspMaxWidth" placeholder="如 680" value="' + escAttr(sbPresetSel.maxWidth || '') + '" style="width:72px"></label>';
+        h += '<label class="sbsp-param">字体<select id="sbspFontFamily">';
+        Object.keys(SB_FONT_FAMILIES).forEach(function(k) {
+          h += '<option value="' + k + '"' + (String(sbPresetSel.fontFamily || '') === k ? ' selected' : '') + '>' + escHtml(SB_FONT_FAMILIES[k]) + '</option>';
+        });
+        h += '</select></label>';
+        h += '</div>';
+        // ===== 参考HTML（可多份，数量不限）=====
+        h += '<div class="sbsp-section">参考状态栏 HTML（可选，可放多份，数量不限）</div>' +
+             '<div class="pv-modal-hint" style="margin-bottom:6px">把你觉得好看的状态栏 HTML 丢进来，AI 会照着这个"好看的基准"去做配色与排版；它不会照抄字段名，只用变量结构脚本里的字段。</div>' +
+             '<textarea id="sbspRefText" rows="4" placeholder="在这里粘贴一份状态栏 HTML（整段贴进来即可）"></textarea>' +
+             '<div class="sbsp-ref-actions">' +
+               '<input type="text" id="sbspRefName" placeholder="这份参考的名字（可留空）" style="flex:1;min-width:120px">' +
+               '<button type="button" class="pv-mini-btn" id="sbspRefAdd">＋ 添加这份参考</button>' +
+               '<label class="pv-mini-btn" style="cursor:pointer">从文件添加<input type="file" id="sbspRefFile" accept=".html,.htm,.txt" multiple style="display:none"></label>' +
+             '</div>' +
+             '<div class="sbsp-ref-list" id="sbspRefList"></div>';
         h += '<div class="sbsp-section">技术硬约束（强烈建议全选，这些是"出bug"的根源）</div><div class="sbsp-rules">';
         Object.keys(SB_HARD_RULES).forEach(function(k) {
           h += '<label class="sbsp-rule"><input type="checkbox" data-sbrule="' + k + '"' + ((sbPresetSel.rules || []).indexOf(k) >= 0 ? ' checked' : '') + '><span>' + escHtml(SB_HARD_RULES[k]) + '</span></label>';
         });
         h += '</div>';
-        h += '<label class="pv-modal-label">额外要求（可选）<input type="text" id="sbspCustom" placeholder="例：数值超过80要变红；不要显示NPC列表" value="' + escAttr(sbPresetSel.custom || '') + '"></label>';
+        h += '<label class="pv-modal-label">额外要求（可选，不限字数，想写多少写多少）' +
+             '<textarea id="sbspCustom" rows="4" placeholder="例：数值超过80自动变红；隐藏NPC列表；顶部要有一行诗；不要圆角；用楷体…">' + escHtml(sbPresetSel.custom || '') + '</textarea></label>';
         h += '</div>';
         h += '<div class="pv-modal-foot">'
           + '<button class="btn btn-ghost" id="sbspReset">恢复默认</button>'
@@ -15510,7 +15611,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         });
         // 收集当前选择
         var collect = function() {
-          var sel = { style: 'darkglass', layout: 'grid', modules: [], fx: [], rules: [], customStyle: '', custom: '' };
+          var sel = { style: 'darkglass', layout: 'grid', modules: [], fx: [], rules: [], customStyle: '', custom: '', refs: [] };
           var onStyle = modal.querySelector('[data-sbsp="style"].on');
           if (onStyle) sel.style = onStyle.getAttribute('data-key');
           var onLayout = modal.querySelector('[data-sbsp="layout"].on');
@@ -15518,12 +15619,143 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
           modal.querySelectorAll('[data-sbsp="modules"].on').forEach(function(b) { sel.modules.push(b.getAttribute('data-key')); });
           modal.querySelectorAll('[data-sbsp="fx"].on').forEach(function(b) { sel.fx.push(b.getAttribute('data-key')); });
           modal.querySelectorAll('[data-sbrule]').forEach(function(c) { if (c.checked) sel.rules.push(c.getAttribute('data-sbrule')); });
-          var cs = modal.querySelector('#sbspCustomStyle');
-          var cu = modal.querySelector('#sbspCustom');
-          sel.customStyle = cs ? cs.value.trim() : '';
-          sel.custom = cu ? cu.value.trim() : '';
+          var gv = function(id) { var el = modal.querySelector('#' + id); return el ? String(el.value || '').trim() : ''; };
+          sel.customStyle = gv('sbspCustomStyle');
+          sel.custom = gv('sbspCustom');
+          sel.radius = gv('sbspRadius');
+          sel.fontBase = gv('sbspFontBase');
+          sel.maxWidth = gv('sbspMaxWidth');
+          sel.fontFamily = gv('sbspFontFamily');
+          // 颜色：只有用户点过（data-on）才算设置，否则留空=不限制
+          ['colorMain', 'colorSub', 'colorText'].forEach(function(f) {
+            var wrap = modal.querySelector('[data-colorwrap="' + f + '"]');
+            var inp = modal.querySelector('#sbspColor' + f.charAt(0).toUpperCase() + f.slice(1));
+            sel[f] = (wrap && wrap.getAttribute('data-on') && inp) ? inp.value : '';
+          });
+          sel.refs = Array.isArray(sbPresetSel.refs) ? sbPresetSel.refs.slice() : [];
           return sel;
         };
+        // 颜色 input：改了就标记为"已启用"，清空则取消
+        modal.querySelectorAll('[data-colorwrap]').forEach(function(wrap) {
+          var f = wrap.getAttribute('data-colorwrap');
+          var inp = wrap.querySelector('input[type=color]');
+          if (inp) inp.addEventListener('change', function() { wrap.setAttribute('data-on', '1'); });
+          var clr = wrap.querySelector('.sbsp-clear');
+          if (clr) clr.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (wrap.getAttribute('data-on')) { wrap.removeAttribute('data-on'); showToast('已清空该颜色（改为不限制）', 'info'); }
+            else { wrap.setAttribute('data-on', '1'); showToast('已启用该颜色', 'info'); }
+          });
+        });
+        // ===== 参考HTML列表：添加 / 删除 / 查看 =====
+        var refListEl = modal.querySelector('#sbspRefList');
+        var showRefText = function(title, text, editable, onSave) {
+          var ov2 = doc.createElement('div');
+          ov2.className = 'pv-modal-overlay';
+          var m2 = doc.createElement('div');
+          m2.className = 'pv-modal pv-modal-wide';
+          m2.innerHTML = '<div class="pv-modal-head"><span>' + escHtml(title) + '</span><button class="icon-btn icon-btn-square" id="rtClose">' + svgIcon('close', 15) + '</button></div>' +
+            '<div class="pv-modal-body"><textarea id="rtText" ' + (editable ? '' : 'readonly') + ' style="width:100%;min-height:50vh;font-size:.78em;line-height:1.6;padding:10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-soft);color:var(--ink);font-family:var(--font-mono);resize:vertical">' + escHtml(text) + '</textarea></div>' +
+            '<div class="pv-modal-foot">' + (editable ? '<button class="btn btn-primary" id="rtSave">保存</button>' : '') + '<button class="btn btn-ghost" id="rtClose2">关闭</button></div>';
+          ov2.appendChild(m2);
+          doc.body.appendChild(ov2);
+          var c2 = function() { ov2.remove(); };
+          bindOverlayClose(ov2, c2);
+          m2.querySelector('#rtClose').addEventListener('click', c2);
+          m2.querySelector('#rtClose2').addEventListener('click', c2);
+          if (editable) {
+            m2.querySelector('#rtSave').addEventListener('click', function() {
+              onSave(String(m2.querySelector('#rtText').value || ''));
+              c2();
+            });
+          }
+        };
+        var renderRefs = function() {
+          if (!refListEl) return;
+          sbPresetSel.refs = Array.isArray(sbPresetSel.refs) ? sbPresetSel.refs : [];
+          var refs = sbPresetSel.refs;
+          if (!refs.length) {
+            refListEl.innerHTML = '<div class="sbsp-ref-empty">还没有参考。放 1-3 份你觉得好看的现状栏，AI 的观感会明显提高。</div>';
+            return;
+          }
+          var total = 0;
+          var hh = '';
+          refs.forEach(function(r, i) {
+            var len = String(r.html || '').length;
+            total += len;
+            hh += '<div class="sbsp-ref-item">'
+              + '<span class="sbsp-ref-name">' + escHtml(r.name || ('参考' + (i + 1))) + '</span>'
+              + '<span class="sbsp-ref-size">' + len + ' 字符</span>'
+              + '<button type="button" class="pv-mini-btn" data-ref-edit="' + i + '">编辑</button>'
+              + '<button type="button" class="pv-mini-btn" data-ref-view="' + i + '">查看</button>'
+              + '<button type="button" class="pv-mini-btn danger" data-ref-del="' + i + '">删除</button>'
+              + '</div>';
+          });
+          hh += '<div class="sbsp-ref-total">共 ' + refs.length + ' 份 · ' + total + ' 字符'
+            + (total > 120000 ? '（偏大，可能挤压模型上下文，建议精简或减少份数）' : '（数量不限，想放几份放几份）') + '</div>';
+          refListEl.innerHTML = hh;
+          refListEl.querySelectorAll('[data-ref-del]').forEach(function(b) {
+            b.addEventListener('click', function(e) {
+              e.stopPropagation();
+              var i = parseInt(this.getAttribute('data-ref-del'), 10);
+              sbPresetSel.refs.splice(i, 1);
+              renderRefs();
+            });
+          });
+          refListEl.querySelectorAll('[data-ref-view]').forEach(function(b) {
+            b.addEventListener('click', function(e) {
+              e.stopPropagation();
+              var r = sbPresetSel.refs[parseInt(this.getAttribute('data-ref-view'), 10)];
+              if (r) showRefText(r.name || '参考', String(r.html || ''), false, null);
+            });
+          });
+          refListEl.querySelectorAll('[data-ref-edit]').forEach(function(b) {
+            b.addEventListener('click', function(e) {
+              e.stopPropagation();
+              var i = parseInt(this.getAttribute('data-ref-edit'), 10);
+              var r = sbPresetSel.refs[i];
+              if (!r) return;
+              showRefText('编辑参考：' + (r.name || ('参考' + (i + 1))), String(r.html || ''), true, function(v) {
+                sbPresetSel.refs[i].html = v;
+                renderRefs();
+                showToast('✅ 参考已更新', 'success');
+              });
+            });
+          });
+        };
+        renderRefs();
+        var refAddBtn = modal.querySelector('#sbspRefAdd');
+        if (refAddBtn) refAddBtn.addEventListener('click', function() {
+          var ta = modal.querySelector('#sbspRefText');
+          var nm = modal.querySelector('#sbspRefName');
+          var html = String(ta.value || '').trim();
+          if (!html) { showToast('⚠️ 请先粘贴一份状态栏 HTML', 'warning'); return; }
+          sbPresetSel.refs = Array.isArray(sbPresetSel.refs) ? sbPresetSel.refs : [];
+          sbPresetSel.refs.push({ name: String(nm.value || '').trim(), html: html });
+          ta.value = '';
+          nm.value = '';
+          renderRefs();
+          showToast('✅ 已添加参考（共 ' + sbPresetSel.refs.length + ' 份）', 'success');
+        });
+        var refFile = modal.querySelector('#sbspRefFile');
+        if (refFile) refFile.addEventListener('change', function() {
+          var files = Array.prototype.slice.call(this.files || []);
+          if (!files.length) return;
+          var pending = files.length, ok = 0;
+          var self = this;
+          files.forEach(function(f) {
+            var fr = new FileReader();
+            fr.onload = function() {
+              sbPresetSel.refs = Array.isArray(sbPresetSel.refs) ? sbPresetSel.refs : [];
+              sbPresetSel.refs.push({ name: f.name, html: String(fr.result || '') });
+              ok++;
+              if (--pending === 0) { renderRefs(); showToast('✅ 已添加 ' + ok + ' 份参考', 'success'); }
+            };
+            fr.onerror = function() { if (--pending === 0) renderRefs(); };
+            fr.readAsText(f);
+          });
+          self.value = '';
+        });
         modal.querySelector('#sbspReset').addEventListener('click', function() {
           sbPresetSel = JSON.parse(JSON.stringify(SB_DEFAULT_PRESET));
           closeIt();
@@ -15571,8 +15803,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
       var pvSelectedIdx = {};     // 多选模式下已选中的条目索引
       var pvOpenIdx = {};         // 条目名 → 是否展开（重渲染后保持展开状态）
       var pvFocusIdx = -1;        // 最近点击过的条目索引（Alt+↑/↓ 用它来上下移动）
-      // 创作模式：'create' 从零创作 / 'revise' 修改现有卡（导入卡后自动进入）
-      var workMode = 'create';
+      // 注：workMode 声明在顶层（buildPrompt 要读它），这里不再重复声明，否则会遮蔽顶层变量
       function renderPreview() {
         if (_renderPreviewTimer) clearTimeout(_renderPreviewTimer);
         _renderPreviewTimer = setTimeout(_renderPreviewImpl, 80);
@@ -15979,6 +16210,7 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
         }
         if (mvuChk.all7Done) {
           sH += '<button class="pv-mini-btn" data-pv-action="gen-statusbar">' + svgIcon('sparkle', 13) + ' ' + (hasStatusBar ? '重新生成' : '生成状态栏') + '</button>';
+          sH += '<button class="pv-mini-btn" data-pv-action="sb-preset">' + svgIcon('palette', 13) + ' 风格预设 / 参考HTML</button>';
         }
         sH += '</div>';
 
@@ -16538,12 +16770,15 @@ svg.ic{display:inline-block;vertical-align:-.18em;flex-shrink:0;transition:color
             var act = this.getAttribute('data-pv-action');
             if (act === 'preview-firstmes') {
               showFirstMesPreview();
+            } else if (act === 'sb-preset') {
+              showStatusBarPresetModal();
             } else if (act === 'preview-statusbar') {
               showMvuStatusBarPreview();
             } else if (act === 'gen-statusbar') {
               var input = doc.getElementById('chatInput');
               if (input) {
-                input.value = '请根据已配置的MVU变量系统，生成状态栏HTML。输出一个完整的HTML文档（含CSS和JS），使用 populateCharacterData + getAllVariables + eventOn(Mvu.events.VARIABLE_UPDATE_ENDED) + errorCatched 标准模式。';
+                // 同样使用预设拼出的完整规格提示词
+                input.value = buildStatusBarPrompt(sbPresetSel);
                 updateCharCount();
                 updateSendBtnPulse();
                 try { input.focus(); } catch(_) {}
